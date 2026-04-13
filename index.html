@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grudge Studio — Character Playground</title>
+  <link rel="icon" href="../favicon/grudge-icon-32x32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1020; --card: #141a2b; --text: #e8eaf6; --muted: #a5b4d0;
+      --border: #2a3150; --accent: #6ee7b7; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+    #app { display: grid; grid-template-columns: 280px 1fr 320px; grid-template-rows: 50px 1fr 220px; height: 100vh; }
+
+    /* Header */
+    header { grid-column: 1/-1; background: linear-gradient(135deg, rgba(14,22,48,.9), rgba(20,26,43,.7));
+      border-bottom: 2px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+    header h1 { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
+    header .status { color: var(--muted); font-size: .8rem; margin-left: auto; }
+
+    /* Panels */
+    .panel { background: linear-gradient(135deg, rgba(20,26,43,.95), rgba(20,26,43,.75));
+      border: 1px solid var(--border); overflow-y: auto; padding: 12px; }
+    .panel::-webkit-scrollbar { width: 5px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+    .panel h3 { font-family: 'Cinzel', serif; font-size: .9rem; color: var(--accent);
+      border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 10px; }
+
+    /* Left Panel — Character Select + Equipment */
+    #leftPanel { grid-row: 2/4; }
+    .faction-btn { width: 100%; padding: 8px 12px; margin-bottom: 4px; border: 1px solid var(--border);
+      border-radius: 6px; background: rgba(0,0,0,.2); color: var(--text); cursor: pointer;
+      font-size: .85rem; text-align: left; transition: all .2s; display: flex; align-items: center; gap: 8px; }
+    .faction-btn:hover { border-color: var(--accent); }
+    .faction-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .faction-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    .slot-group { margin-bottom: 12px; }
+    .slot-group h4 { font-size: .75rem; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .slot-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+    .slot-label { font-size: .75rem; color: var(--muted); min-width: 60px; line-height: 26px; }
+    .slot-btn { padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(0,0,0,.3); color: var(--text); cursor: pointer; font-size: .75rem; transition: all .15s; }
+    .slot-btn:hover { border-color: var(--accent); }
+    .slot-btn.equipped { background: rgba(110,231,183,.2); border-color: var(--accent); color: var(--accent); }
+
+    /* Center — 3D Viewport */
+    #viewport { position: relative; background: #000; }
+    #viewport canvas { display: block; width: 100%; height: 100%; }
+    #loadingOverlay { position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: rgba(11,16,32,.9); z-index: 10; }
+    #loadingOverlay.hidden { display: none; }
+    #loadingOverlay .spinner { width: 40px; height: 40px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loadingOverlay p { color: var(--muted); margin-top: 12px; font-size: .85rem; }
+
+    /* Right Panel — Stats + Combat */
+    #rightPanel { grid-row: 2/4; }
+    .attr-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .attr-row label { font-size: .75rem; min-width: 30px; font-weight: 600; }
+    .attr-row input[type=range] { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 2px; }
+    .attr-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px;
+      border-radius: 50%; background: var(--accent); cursor: pointer; }
+    .attr-row .val { font-size: .75rem; font-family: monospace; min-width: 24px; text-align: right; color: var(--accent); }
+    .points-bar { text-align: center; padding: 6px; background: rgba(0,0,0,.3); border-radius: 6px;
+      font-size: .8rem; margin-bottom: 10px; font-family: monospace; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .stat-item { display: flex; justify-content: space-between; padding: 3px 6px;
+      background: rgba(0,0,0,.2); border-radius: 4px; font-size: .7rem; }
+    .stat-item .label { color: var(--muted); }
+    .stat-item .value { color: var(--accent); font-family: monospace; }
+
+    /* Bottom Panel — Animation + Admin */
+    #bottomPanel { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
+    #animPanel, #adminPanel { padding: 12px; background: linear-gradient(135deg, rgba(20,26,43,.95), rgba(20,26,43,.75));
+      border-top: 1px solid var(--border); overflow-y: auto; }
+    select, button.action-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(0,0,0,.3); color: var(--text); font-size: .8rem; cursor: pointer; }
+    select { width: 100%; margin-bottom: 6px; }
+    button.action-btn { margin: 2px; transition: all .2s; }
+    button.action-btn:hover { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .anim-list { max-height: 120px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 3px; }
+    .anim-btn { padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px;
+      background: rgba(0,0,0,.2); color: var(--muted); cursor: pointer; font-size: .7rem; transition: all .15s; }
+    .anim-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .anim-btn.playing { color: var(--accent); border-color: var(--accent); background: rgba(110,231,183,.15); }
+
+    .combat-log { font-family: monospace; font-size: .65rem; color: var(--muted); max-height: 80px;
+      overflow-y: auto; background: rgba(0,0,0,.3); border-radius: 4px; padding: 6px; margin-top: 6px; }
+    .combat-log .crit { color: #fbbf24; }
+    .combat-log .block { color: #3b82f6; }
+
+    /* Saved character list */
+    .saved-char { display: flex; align-items: center; gap: 6px; padding: 6px 8px; margin-bottom: 3px;
+      border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,.2);
+      cursor: pointer; transition: all .2s; font-size: .8rem; }
+    .saved-char:hover { border-color: var(--accent); }
+    .saved-char.active { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .saved-char .char-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .saved-char .char-race { color: var(--muted); font-size: .7rem; }
+    .saved-char .char-delete { color: var(--danger); cursor: pointer; font-size: .7rem;
+      padding: 2px 4px; border-radius: 3px; }
+    .saved-char .char-delete:hover { background: rgba(239,68,68,.2); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>GRUDGE CHARACTER CREATOR</h1>
+    <span style="color:var(--muted);font-size:.75rem;">v2.0</span>
+    <button class="action-btn" id="saveBuildBtn" style="margin-left:12px;">💾 Save Build</button>
+    <button class="action-btn" id="updateBuildBtn" style="display:none;">🔄 Update Build</button>
+    <span class="status" id="statusBar">Select a race to begin</span>
+    <span id="userDisplay" style="color:var(--accent);font-size:.75rem;margin-left:8px;"></span>
+  </header>
+
+  <!-- LEFT: Character Select + Equipment -->
+  <div class="panel" id="leftPanel">
+    <h3>My Characters <span id="charCount" style="font-size:.7rem;color:var(--muted);">(0)</span></h3>
+    <div id="savedCharactersList" style="margin-bottom:10px;">
+      <p style="color:var(--muted);font-size:.8rem;">Loading...</p>
+    </div>
+    <h3>Faction / Race</h3>
+    <div id="raceSelector"></div>
+    <h3 style="margin-top:14px;">Equipment</h3>
+    <div id="equipmentPanel"><p style="color:var(--muted);font-size:.8rem;">Load a character first</p></div>
+  </div>
+
+  <!-- CENTER: 3D Viewport -->
+  <div id="viewport">
+    <div id="loadingOverlay">
+      <div class="spinner"></div>
+      <p id="loadingText">Select a faction race...</p>
+    </div>
+  </div>
+
+  <!-- RIGHT: Stats Panel -->
+  <div class="panel" id="rightPanel">
+    <h3>Attributes <span id="pointsDisplay" class="points-bar">0 / 160</span></h3>
+    <div id="attributeSliders"></div>
+    <h3>Derived Stats</h3>
+    <div class="stat-grid" id="derivedStats"></div>
+    <h3 style="margin-top:10px;">Combat Test</h3>
+    <button class="action-btn" id="combatTestBtn" style="width:100%;">Attack Test Dummy</button>
+    <div class="combat-log" id="combatLog">Click "Attack Test Dummy" to simulate...</div>
+  </div>
+
+  <!-- BOTTOM: Animations + Admin -->
+  <div id="bottomPanel">
+    <div id="animPanel">
+      <h3>Animations</h3>
+      <select id="weaponPackSelect"><option value="">— Select Weapon Pack —</option></select>
+      <div class="anim-list" id="animList"></div>
+      <div style="margin-top:6px;display:flex;gap:4px;">
+        <button class="action-btn" id="animPause">⏸ Pause</button>
+        <button class="action-btn" id="animStop">⏹ Stop</button>
+        <label style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto;">
+          Speed <input type="range" min="0.1" max="3" step="0.1" value="1" id="animSpeed" style="width:60px;">
+          <span id="animSpeedVal">1.0x</span>
+        </label>
+      </div>
+    </div>
+    <div id="adminPanel">
+      <h3>Admin Panel</h3>
+      <button class="action-btn" id="spawnDummy" style="width:100%;margin-bottom:4px;">Spawn Test Dummy</button>
+      <button class="action-btn" id="toggleWireframe" style="width:100%;margin-bottom:4px;">Toggle Wireframe</button>
+      <button class="action-btn" id="toggleSkeleton" style="width:100%;margin-bottom:4px;">Toggle Skeleton Helper</button>
+      <button class="action-btn" id="showAllParts" style="width:100%;margin-bottom:4px;">Show All Equipment</button>
+      <button class="action-btn" id="resetCamera" style="width:100%;margin-bottom:4px;">Reset Camera</button>
+      <button class="action-btn" onclick="window.open('https://molochdagod.github.io/ObjectStore/ItemBrowser.html','_blank')" style="width:100%;">
+        Open Item Browser ↗
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js via ES Module import map -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

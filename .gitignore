@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vercel/
+.env
+.env.local
+*.tga
+*.FBX
+*.fbx
+*.meta
