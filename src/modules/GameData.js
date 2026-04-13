@@ -8,6 +8,41 @@
 // ══════════════════════════════════════════════════════════════
 // CLASSES
 // ══════════════════════════════════════════════════════════════
+// ── Worge Form Models (GLTF) ────────────────────────────────
+export const WORGE_FORMS = {
+  bear: {
+    name: 'Bear Form',
+    icon: '🐻',
+    model: 'factioncharacters/ADDITIONAL_MODELS/worge_forms/werewolf/scene.gltf',
+    desc: 'Large and powerful — tank form. High HP, high defense, AoE taunt.',
+  },
+  warbear: {
+    name: 'Warbear Form (Lv20)',
+    icon: '🐻',
+    model: 'factioncharacters/ADDITIONAL_MODELS/worge_forms/warbear/scene.gltf',
+    desc: 'Ultimate bear form — 3x HP, massive size, raid-boss tanking. Level 20 class skill.',
+  },
+  raptor: {
+    name: 'Raptor Form',
+    icon: '🦎',
+    model: 'factioncharacters/ADDITIONAL_MODELS/worge_forms/raptor/scene.gltf',
+    desc: 'Invisible rogue — stealth, backstab, bleed. Fast and deadly.',
+  },
+  bird: {
+    name: 'Large Bird Form',
+    icon: '🦅',
+    model: null, // TODO: add bird model
+    desc: 'Flyable mount — carry allies, aerial combat, dive bomb.',
+  },
+};
+
+// ── Magic Projectile VFX ────────────────────────────────────
+export const MAGIC_VFX = {
+  basePath: 'animationsweapons/magicFX/projectiles/assets/BinbunVFX/magic_projectiles/',
+  categories: ['basic', 'fire', 'ice', 'lightning', 'dark', 'holy'],
+  desc: 'Godot .tres particle materials — convert to Three.js particle systems for spell effects.',
+};
+
 export const CLASSES = {
   warrior: {
     name: 'Warrior', icon: '⚔️', color: '#ef4444',
@@ -34,18 +69,31 @@ export const CLASSES = {
     abilities: ['Perfect Parry', 'Dash Strike', 'Arrow Burst', 'Evasion Roll'],
   },
   worge: {
-    name: 'Worge', icon: '🐺', color: '#14b8a6',
+    name: 'Worge', icon: '🐺', color: '#d97706',
     desc: 'Shapeshifter. Three forms: Bear (tank), Raptor (stealth), Large Bird (flight).',
     primaryAttr: 'VIT', secondaryAttr: 'END',
     weaponTypes: ['staff', 'spear', 'dagger', 'bow', 'hammer', 'mace', 'offhand_relic'],
     passive: 'Form shifting — Bear: power + tank. Raptor: invisible rogue. Bird: flyable mount.',
     abilities: ['Bear Form', 'Raptor Form', 'Bird Form', 'Primal Roar'],
+    forms: WORGE_FORMS,
   },
 };
 
-// ══════════════════════════════════════════════════════════════
+// ── Integration Notes ────────────────────────────────────────
+// CLASS_SKILLS below aligns with GrudgeBuilder's skillTreeData.ts format:
+//   - Skills have: id, name, level (tier unlock), desc, cost (skill points)
+//   - GrudgeBuilder adds: scaling { stat, perLevel, unit }, requires, maxPoints
+//   - When syncing to GrudgeBuilder, map: level→tier, cost→maxPoints, add scaling
+// PROFESSIONS aligns with GrudgeBuilder's professionSystem.ts:
+//   - Uses same icons, same profession names, same XP curve concept
+//   - GrudgeBuilder adds: crafting professions (Blacksmithing, etc.), XP table, gathering bonuses
+// grudge-arena's GrudgeCharacter.js consumes these via the shared character model
+//   - race, weaponClass, health, speed, attackSpeed from CLASSES
+//   - animations from WEAPON_ANIMATION_PACKS in FactionRegistry.js
+
+// ════════════════════════════════════════════════════════════
 // CLASS SKILL TREES
-// ══════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 export const CLASS_SKILLS = {
   warrior: {
     trees: {
@@ -168,7 +216,7 @@ export const CLASS_SKILLS = {
           { id: 'thrash',       name: 'Thrash',         level: 6,  desc: 'AoE thrash bleeding all nearby', cost: 2 },
           { id: 'iron_fur',     name: 'Iron Fur',       level: 10, desc: 'Harden fur, +40% armor for 6s', cost: 2 },
           { id: 'pulverize',    name: 'Pulverize',      level: 15, desc: 'Consume bleeds for massive burst damage', cost: 3 },
-          { id: 'ursoc',        name: 'Ursoc\'s Fury',  level: 20, desc: 'Become giant bear, 3x HP for 12s. Ultimate.', cost: 5 },
+          { id: 'ursoc',        name: 'Ursoc\'s Fury',  level: 20, desc: 'Become giant bear, 3x HP for 12s. Ultimate.', cost: 5, model: 'worge_forms/warbear' },
         ],
       },
       raptor: {
@@ -179,7 +227,7 @@ export const CLASS_SKILLS = {
           { id: 'shred',        name: 'Shred',          level: 5,  desc: 'Shred from behind for 200% damage', cost: 1 },
           { id: 'rip',          name: 'Rip',            level: 8,  desc: 'Powerful bleed dealing damage over 12s', cost: 2 },
           { id: 'ferocious',    name: 'Ferocious Bite', level: 12, desc: 'Finishing move, damage scales with combo points', cost: 2 },
-          { id: 'predator',     name: 'Apex Predator',  level: 20, desc: 'Permanent stealth while moving. Ultimate.', cost: 5 },
+          { id: 'predator',     name: 'Apex Predator',  level: 20, desc: 'Permanent stealth while moving. Ultimate.', cost: 5, model: 'worge_forms/raptor' },
         ],
       },
       bird: {

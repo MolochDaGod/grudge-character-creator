@@ -12,7 +12,7 @@ import {
 import { apiClient } from './modules/ApiClient.js';
 import { characterStore } from './modules/CharacterStore.js';
 import {
-  CLASSES, CLASS_SKILLS, PROFESSIONS,
+  CLASSES, CLASS_SKILLS, PROFESSIONS, WORGE_FORMS, MAGIC_VFX,
   WEAPON_TYPES, WEAPON_SKILLS, MASTERY_TIERS, getMasteryProgress,
 } from './modules/GameData.js';
 
@@ -572,15 +572,30 @@ function buildClassSkillTrees(classId) {
     html += `<div class="tree-section">`;
     html += `<div class="tree-header">${tree.icon} ${tree.name} <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">${tree.desc}</span></div>`;
     for (const skill of tree.skills) {
+      const modelBadge = skill.model ? ' <span style="color:#fbbf24;font-size:.6rem;">[3D]</span>' : '';
       html += `<div class="skill-node">
         <span class="skill-lvl">Lv${skill.level}</span>
-        <span class="skill-name">${skill.name}</span>
+        <span class="skill-name">${skill.name}${modelBadge}</span>
         <span class="skill-cost">${skill.cost}pt</span>
-        <div class="skill-desc">${skill.desc}</div>
+        <div class="skill-desc">${skill.desc}${skill.model ? '<br><em style="color:#fbbf24;">Has 3D form model</em>' : ''}</div>
       </div>`;
     }
     html += `</div>`;
   }
+
+  // Show Worge forms preview if Worge class
+  if (classId === 'worge') {
+    html += `<h3 style="margin-top:10px;">Form Models</h3>`;
+    for (const [fid, form] of Object.entries(WORGE_FORMS)) {
+      const hasModel = form.model ? '\u2705' : '\u274c';
+      html += `<div class="skill-node">
+        <span class="skill-lvl">${form.icon}</span>
+        <span class="skill-name">${form.name} ${hasModel}</span>
+        <div class="skill-desc">${form.desc}</div>
+      </div>`;
+    }
+  }
+
   container.innerHTML = html;
 }
 
