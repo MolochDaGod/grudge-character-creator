@@ -1,23 +1,12 @@
 import { defineConfig } from 'vite';
-import path from 'path';
 
 export default defineConfig({
   root: '.',
   publicDir: 'public',
   server: {
     port: 3000,
-    proxy: {
-      // Proxy /assets to the parent directory for local FBX files
-      '/assets': {
-        target: 'http://localhost:3000',
-        rewrite: () => '',
-        configure: (proxy, options) => {
-          // Not needed — handled by fs.allow below
-        },
-      },
-    },
     fs: {
-      // Allow Vite to serve files from parent (factioncharacters, animationsweapons)
+      // Allow Vite to serve files from parent dir (factioncharacters, animationsweapons)
       allow: ['.', '..'],
     },
   },

@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grudge Studio — Character Playground</title>
-  <link rel="icon" href="../favicon/grudge-icon-32x32.png">
+  <title>Grudge Studio — Character Creator</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/grudge-icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/grudge-icon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/grudge-icon-180x180.png">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -105,6 +107,69 @@
     .saved-char .char-delete { color: var(--danger); cursor: pointer; font-size: .7rem;
       padding: 2px 4px; border-radius: 3px; }
     .saved-char .char-delete:hover { background: rgba(239,68,68,.2); }
+
+    /* Tab System */
+    .tab-bar { display: flex; gap: 1px; border-bottom: 2px solid var(--border); margin-bottom: 8px; flex-wrap: wrap; }
+    .tab-btn { padding: 5px 8px; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0;
+      background: transparent; color: var(--muted); cursor: pointer; font-size: .65rem; transition: all .2s;
+      font-family: 'Cinzel', serif; white-space: nowrap; }
+    .tab-btn:hover { color: var(--text); background: rgba(110,231,183,.05); }
+    .tab-btn.active { color: var(--accent); background: rgba(110,231,183,.1); border-color: var(--border); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Class card */
+    .class-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px;
+      background: rgba(0,0,0,.2); cursor: pointer; transition: all .2s; }
+    .class-card:hover { border-color: var(--accent); }
+    .class-card.selected { border-color: var(--accent); background: rgba(110,231,183,.08); }
+    .class-card .class-header { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; }
+    .class-card .class-desc { font-size: .7rem; color: var(--muted); margin-top: 4px; }
+
+    /* Skill tree */
+    .tree-section { margin-bottom: 10px; }
+    .tree-header { font-size: .75rem; font-weight: 600; color: var(--text); padding: 4px 6px;
+      background: rgba(0,0,0,.3); border-radius: 4px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .skill-node { display: flex; align-items: center; gap: 6px; padding: 4px 8px; margin-bottom: 2px;
+      border-left: 2px solid var(--border); font-size: .7rem; transition: all .15s; }
+    .skill-node:hover { border-left-color: var(--accent); background: rgba(110,231,183,.03); }
+    .skill-node .skill-lvl { font-size: .6rem; color: var(--muted); min-width: 28px; font-family: monospace; }
+    .skill-node .skill-name { color: var(--text); flex: 1; }
+    .skill-node .skill-cost { font-size: .6rem; color: var(--accent); font-family: monospace; }
+    .skill-node .skill-desc { display: none; }
+    .skill-node:hover .skill-desc { display: block; position: absolute; z-index: 20; background: var(--card);
+      border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; max-width: 200px;
+      font-size: .65rem; color: var(--muted); top: 100%; left: 0; }
+    .skill-node { position: relative; }
+
+    /* Profession card */
+    .prof-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px;
+      background: rgba(0,0,0,.2); }
+    .prof-header { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; margin-bottom: 4px; }
+    .prof-tier { display: flex; align-items: center; gap: 6px; padding: 3px 6px; margin-bottom: 2px;
+      font-size: .65rem; border-left: 2px solid var(--border); }
+    .prof-tier .tier-lvl { color: var(--accent); font-family: monospace; min-width: 30px; }
+    .prof-tier .tier-name { color: var(--text); min-width: 100px; }
+    .prof-tier .tier-res { color: var(--muted); font-size: .6rem; }
+
+    /* Mastery bar */
+    .mastery-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px 6px;
+      background: rgba(0,0,0,.2); border-radius: 4px; }
+    .mastery-icon { font-size: 1rem; }
+    .mastery-info { flex: 1; }
+    .mastery-name { font-size: .75rem; color: var(--text); }
+    .mastery-tier { font-size: .6rem; color: var(--accent); }
+    .mastery-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 2px; }
+    .mastery-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+    .mastery-xp { font-size: .6rem; color: var(--muted); font-family: monospace; min-width: 50px; text-align: right; }
+
+    /* Weapon type grid */
+    .wep-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 8px; }
+    .wep-type-btn { padding: 4px; border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(0,0,0,.2); cursor: pointer; font-size: .6rem; text-align: center;
+      transition: all .15s; color: var(--muted); }
+    .wep-type-btn:hover { border-color: var(--accent); color: var(--text); }
+    .wep-type-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); color: var(--accent); }
   </style>
 </head>
 <body>
@@ -138,15 +203,53 @@
     </div>
   </div>
 
-  <!-- RIGHT: Stats Panel -->
+  <!-- RIGHT: Tabbed Panel -->
   <div class="panel" id="rightPanel">
-    <h3>Attributes <span id="pointsDisplay" class="points-bar">0 / 160</span></h3>
-    <div id="attributeSliders"></div>
-    <h3>Derived Stats</h3>
-    <div class="stat-grid" id="derivedStats"></div>
-    <h3 style="margin-top:10px;">Combat Test</h3>
-    <button class="action-btn" id="combatTestBtn" style="width:100%;">Attack Test Dummy</button>
-    <div class="combat-log" id="combatLog">Click "Attack Test Dummy" to simulate...</div>
+    <div class="tab-bar" id="mainTabBar">
+      <button class="tab-btn active" data-tab="tabCharacter">Character</button>
+      <button class="tab-btn" data-tab="tabClassSkills">Class</button>
+      <button class="tab-btn" data-tab="tabWeaponSkills">Wpn Skills</button>
+      <button class="tab-btn" data-tab="tabProfessions">Professions</button>
+      <button class="tab-btn" data-tab="tabMastery">Mastery</button>
+    </div>
+
+    <!-- Tab: Character (attrs + stats + combat) -->
+    <div class="tab-content active" id="tabCharacter">
+      <h3>Attributes <span id="pointsDisplay" class="points-bar">0 / 160</span></h3>
+      <div id="attributeSliders"></div>
+      <h3>Derived Stats</h3>
+      <div class="stat-grid" id="derivedStats"></div>
+      <h3 style="margin-top:10px;">Combat Test</h3>
+      <button class="action-btn" id="combatTestBtn" style="width:100%;">Attack Test Dummy</button>
+      <div class="combat-log" id="combatLog">Click "Attack Test Dummy" to simulate...</div>
+    </div>
+
+    <!-- Tab: Class Skills -->
+    <div class="tab-content" id="tabClassSkills">
+      <h3>Choose Class</h3>
+      <div id="classSelector"></div>
+      <div id="classSkillTrees"><p style="color:var(--muted);font-size:.8rem;">Select a class above</p></div>
+    </div>
+
+    <!-- Tab: Weapon Skills -->
+    <div class="tab-content" id="tabWeaponSkills">
+      <h3>Weapon Type</h3>
+      <div class="wep-type-grid" id="weaponTypeGrid"></div>
+      <div id="weaponSkillTree"><p style="color:var(--muted);font-size:.8rem;">Select a weapon type</p></div>
+    </div>
+
+    <!-- Tab: Professions -->
+    <div class="tab-content" id="tabProfessions">
+      <h3>Harvesting Professions</h3>
+      <div id="professionsList"></div>
+    </div>
+
+    <!-- Tab: Weapon Mastery -->
+    <div class="tab-content" id="tabMastery">
+      <h3>Weapon Mastery</h3>
+      <p style="color:var(--muted);font-size:.7rem;margin-bottom:8px;">XP earned per weapon type through combat use</p>
+      <div id="masteryList"></div>
+    </div>
   </div>
 
   <!-- BOTTOM: Animations + Admin -->

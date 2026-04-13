@@ -11,6 +11,10 @@ import {
 } from './modules/StatsEngine.js';
 import { apiClient } from './modules/ApiClient.js';
 import { characterStore } from './modules/CharacterStore.js';
+import {
+  CLASSES, CLASS_SKILLS, PROFESSIONS,
+  WEAPON_TYPES, WEAPON_SKILLS, MASTERY_TIERS, getMasteryProgress,
+} from './modules/GameData.js';
 
 // ════════════════════════════════════════════════════════════
 // State
@@ -512,6 +516,167 @@ function animate() {
 }
 
 // ════════════════════════════════════════════════════════════
+// Tab System
+// ════════════════════════════════════════════════════════════
+function setupTabs() {
+  const tabBar = document.getElementById('mainTabBar');
+  tabBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    const tabId = btn.dataset.tab;
+    tabBar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#rightPanel .tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// Class Skills Tab
+// ════════════════════════════════════════════════════════════
+let selectedClass = null;
+
+function buildClassSelector() {
+  const container = document.getElementById('classSelector');
+  container.innerHTML = Object.entries(CLASSES).map(([id, cls]) => `
+    <div class="class-card" data-class="${id}">
+      <div class="class-header">
+        <span style="color:${cls.color}">${cls.icon}</span>
+        <span style="color:${cls.color}">${cls.name}</span>
+        <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">${cls.primaryAttr}/${cls.secondaryAttr}</span>
+      </div>
+      <div class="class-desc">${cls.desc}</div>
+    </div>
+  `).join('');
+
+  container.addEventListener('click', (e) => {
+    const card = e.target.closest('.class-card');
+    if (!card) return;
+    selectedClass = card.dataset.class;
+    container.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    buildClassSkillTrees(selectedClass);
+  });
+}
+
+function buildClassSkillTrees(classId) {
+  const container = document.getElementById('classSkillTrees');
+  const classData = CLASS_SKILLS[classId];
+  if (!classData) { container.innerHTML = ''; return; }
+
+  const cls = CLASSES[classId];
+  let html = `<p style="font-size:.7rem;color:var(--muted);margin-bottom:6px;">${cls.passive}</p>`;
+  html += `<p style="font-size:.65rem;color:var(--muted);margin-bottom:8px;">Weapons: ${cls.weaponTypes.map(w => WEAPON_TYPES[w]?.name || w).join(', ')}</p>`;
+
+  for (const [treeId, tree] of Object.entries(classData.trees)) {
+    html += `<div class="tree-section">`;
+    html += `<div class="tree-header">${tree.icon} ${tree.name} <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">${tree.desc}</span></div>`;
+    for (const skill of tree.skills) {
+      html += `<div class="skill-node">
+        <span class="skill-lvl">Lv${skill.level}</span>
+        <span class="skill-name">${skill.name}</span>
+        <span class="skill-cost">${skill.cost}pt</span>
+        <div class="skill-desc">${skill.desc}</div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// Weapon Skills Tab
+// ════════════════════════════════════════════════════════════
+function buildWeaponTypeGrid() {
+  const grid = document.getElementById('weaponTypeGrid');
+  grid.innerHTML = Object.entries(WEAPON_TYPES).map(([id, wep]) =>
+    `<button class="wep-type-btn" data-wep="${id}" title="${wep.name}">${wep.icon}<br>${wep.name.split(' ').pop()}</button>`
+  ).join('');
+
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.wep-type-btn');
+    if (!btn) return;
+    grid.querySelectorAll('.wep-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    buildWeaponSkillTree(btn.dataset.wep);
+  });
+}
+
+function buildWeaponSkillTree(weaponId) {
+  const container = document.getElementById('weaponSkillTree');
+  const wepData = WEAPON_SKILLS[weaponId];
+  const wepType = WEAPON_TYPES[weaponId];
+  if (!wepData) { container.innerHTML = ''; return; }
+
+  let html = `<p style="font-size:.65rem;color:var(--muted);margin-bottom:6px;">Classes: ${wepType.classes.map(c => CLASSES[c]?.name || c).join(', ')} • ${wepType.hand.toUpperCase()}</p>`;
+  html += `<div class="tree-section">`;
+  html += `<div class="tree-header">${wepData.icon} ${wepData.name} Skill Tree</div>`;
+  for (const skill of wepData.skills) {
+    html += `<div class="skill-node">
+      <span class="skill-lvl">Lv${skill.level}</span>
+      <span class="skill-name">${skill.name}</span>
+      <span class="skill-cost" style="color:var(--muted);">${skill.bonus}</span>
+      <div class="skill-desc">${skill.desc}</div>
+    </div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// Professions Tab
+// ════════════════════════════════════════════════════════════
+function buildProfessionsPanel() {
+  const container = document.getElementById('professionsList');
+  container.innerHTML = Object.entries(PROFESSIONS).map(([id, prof]) => {
+    const tiers = prof.tiers.map(t =>
+      `<div class="prof-tier">
+        <span class="tier-lvl">Lv${t.level}</span>
+        <span class="tier-name">${t.name}</span>
+        <span class="tier-res">${t.resources.join(', ')}</span>
+      </div>`
+    ).join('');
+    return `<div class="prof-card">
+      <div class="prof-header">
+        <span>${prof.icon}</span>
+        <span style="color:${prof.color}">${prof.name}</span>
+        <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">Bonus: ${prof.attr}</span>
+      </div>
+      <p style="font-size:.65rem;color:var(--muted);margin-bottom:4px;">${prof.desc}</p>
+      ${tiers}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// Weapon Mastery Tab
+// ════════════════════════════════════════════════════════════
+function buildMasteryPanel() {
+  const container = document.getElementById('masteryList');
+  // Simulated mastery XP per weapon (in real game, this comes from server)
+  const simulatedXP = {};
+  for (const id of Object.keys(WEAPON_TYPES)) {
+    simulatedXP[id] = Math.floor(Math.random() * 15000);
+  }
+
+  container.innerHTML = Object.entries(WEAPON_TYPES).map(([id, wep]) => {
+    const xp = simulatedXP[id];
+    const { current, next, progress } = getMasteryProgress(xp);
+    const pct = Math.floor(progress * 100);
+    const nextLabel = next ? `${next.name} (${next.xp} XP)` : 'MAX';
+    return `<div class="mastery-row">
+      <span class="mastery-icon">${wep.icon}</span>
+      <div class="mastery-info">
+        <div class="mastery-name">${wep.name}</div>
+        <div class="mastery-tier">${current.name} — ${current.bonus}</div>
+        <div class="mastery-bar"><div class="mastery-fill" style="width:${pct}%"></div></div>
+      </div>
+      <span class="mastery-xp">${xp} XP</span>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
 // Persistence UI
 // ════════════════════════════════════════════════════════════
 function buildSavedCharactersList() {
@@ -663,6 +828,11 @@ buildAnimationUI();
 buildStatsPanel();
 setupCombatTest();
 setupAdminPanel();
+setupTabs();
+buildClassSelector();
+buildWeaponTypeGrid();
+buildProfessionsPanel();
+buildMasteryPanel();
 setupPersistence();
 animate();
 updateStatus('Ready — select a faction race to load');
