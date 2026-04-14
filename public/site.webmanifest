@@ -1,0 +1,12 @@
+{
+  "name": "Grudge Studio — Character Creator",
+  "short_name": "Grudge Creator",
+  "icons": [
+    { "src": "/favicon/grudge-icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon/grudge-icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#0b1020",
+  "background_color": "#0b1020",
+  "display": "standalone",
+  "start_url": "/"
+}

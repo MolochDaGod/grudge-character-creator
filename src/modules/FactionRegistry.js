@@ -473,6 +473,17 @@ export const WEAPON_ANIMATION_PACKS = {
       'jump.fbx', 'rac.fbx',
     ],
   },
+  // ── Single-take FBX: Ren (Lost Ark spear/staff character) ──
+  // All animations baked into one timeline. Load as single file.
+  // Use Three.js AnimationClip.subclip() to split by frame ranges.
+  ren_staff_spear: {
+    name: 'Ren Staff/Spear (single-take)',
+    path: `${ANIM_BASE}/ren_staff_spear/`,
+    singleFile: 'Ren-1.fbx',
+    skeleton: 'biped',  // bip001 skeleton
+    note: 'Single-take FBX — all anims on one timeline. Split in code via subclip().',
+    files: ['Ren-1.fbx'],
+  },
 };
 
 // Standalone weapon model packs (for swapping/testing)
