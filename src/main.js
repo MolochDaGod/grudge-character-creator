@@ -18,6 +18,12 @@ import {
 } from './modules/GameData.js';
 import { WeaponAnimController } from './modules/WeaponAnimController.js';
 
+// ── New modules from threejs-skills integration ──
+import { assetCache } from './modules/AssetCache.js';
+import { PostFX } from './modules/PostFX.js';
+import { BoneAttachment } from './modules/BoneAttachment.js';
+import { BossFight } from './modules/BossFight.js';
+
 // ════════════════════════════════════════════════════════════
 // State
 // ════════════════════════════════════════════════════════════
@@ -40,6 +46,11 @@ let currentRaceId = null;
 // Weapon animation controller
 let weaponCtrl = null;
 
+// Post-processing, bone attachment, boss fight
+let postfx = null;
+let boneAttach = new BoneAttachment();
+let bossFight = null;
+
 // ════════════════════════════════════════════════════════════
 // Scene Setup
 // ════════════════════════════════════════════════════════════
@@ -58,6 +69,7 @@ function initScene() {
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
+    if (postfx) postfx.resize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -116,6 +128,12 @@ function initScene() {
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
+
+  // Init post-processing pipeline
+  postfx = new PostFX(renderer, scene, camera);
+
+  // Init boss fight controller
+  bossFight = new BossFight(scene, camera, { postfx, updateStatus });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -519,6 +537,36 @@ function setupAdminPanel() {
     dummies.push(dummy);
     updateStatus(`Spawned dummy (${dummies.length} total)`);
   });
+
+  // Toggle PostFX
+  const pfxBtn = document.getElementById('togglePostFX');
+  if (pfxBtn) pfxBtn.addEventListener("click", () => {
+    if (postfx) {
+      const on = postfx.toggle();
+      updateStatus("Post-processing: " + (on ? "ON" : "OFF"));
+    }
+  });
+
+  // Boss Fight button
+  const bossBtn = document.getElementById('startBossFight');
+  if (bossBtn) bossBtn.addEventListener("click", async () => {
+    if (!bossFight) return;
+    if (bossFight.isActive) {
+      bossFight.exit();
+    } else {
+      if (!currentModel) { updateStatus("Load a character first!"); return; }
+      await bossFight.enter(currentModel, mixer);
+    }
+  });
+
+  // List bones (debug)
+  const bonesBtn = document.getElementById('listBones');
+  if (bonesBtn) bonesBtn.addEventListener("click", () => {
+    if (!currentModel) return;
+    const bones = BoneAttachment.listBones(currentModel);
+    console.log("Bones:", bones);
+    updateStatus(bones.length + " bones — see console");
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -536,7 +584,18 @@ function animate() {
   const dt = clock.getDelta();
   controls.update();
   if (mixer) mixer.update(dt);
-  renderer.render(scene, camera);
+
+  // Boss fight update
+  if (bossFight && bossFight.isActive) {
+    bossFight.update(dt, currentModel);
+  }
+
+  // Render via PostFX pipeline (falls back to direct render when disabled)
+  if (postfx) {
+    postfx.update(dt);
+  } else {
+    renderer.render(scene, camera);
+  }
 }
 
 // ════════════════════════════════════════════════════════════

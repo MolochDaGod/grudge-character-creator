@@ -13,7 +13,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
-      external: ['three', 'three/addons/controls/OrbitControls.js', 'three/addons/loaders/FBXLoader.js'],
+      // Externalize all Three.js imports — resolved at runtime via importmap in index.html
+      external: (id) => id === 'three' || id.startsWith('three/'),
     },
   },
 });
