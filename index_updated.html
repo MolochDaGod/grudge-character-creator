@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grudge Studio — Character Creator</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/grudge-icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/grudge-icon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/grudge-icon-180x180.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1020; --card: #141a2b; --text: #e8eaf6; --muted: #a5b4d0;
+      --border: #2a3150; --accent: #6ee7b7; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+    #app { display: grid; grid-template-columns: 280px 1fr 320px; grid-template-rows: 50px 1fr 220px; height: 100vh; }
+
+    /* Header */
+    header { grid-column: 1/-1; background: linear-gradient(135deg, rgba(14,22,48,.9), rgba(20,26,43,.7));
+      border-bottom: 2px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 16px; }
+    header h1 { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
+    header .status { color: var(--muted); font-size: .8rem; margin-left: auto; }
+
+    /* Panels */
+    .panel { background: linear-gradient(135deg, rgba(20,26,43,.95), rgba(20,26,43,.75));
+      border: 1px solid var(--border); overflow-y: auto; padding: 12px; }
+    .panel::-webkit-scrollbar { width: 5px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+    .panel h3 { font-family: 'Cinzel', serif; font-size: .9rem; color: var(--accent);
+      border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 10px; }
+
+    /* Left Panel — Character Select + Equipment */
+    #leftPanel { grid-row: 2/4; }
+    .faction-btn { width: 100%; padding: 8px 12px; margin-bottom: 4px; border: 1px solid var(--border);
+      border-radius: 6px; background: rgba(0,0,0,.2); color: var(--text); cursor: pointer;
+      font-size: .85rem; text-align: left; transition: all .2s; display: flex; align-items: center; gap: 8px; }
+    .faction-btn:hover { border-color: var(--accent); }
+    .faction-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .faction-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    .slot-group { margin-bottom: 12px; }
+    .slot-group h4 { font-size: .75rem; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .slot-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+    .slot-label { font-size: .75rem; color: var(--muted); min-width: 60px; line-height: 26px; }
+    .slot-btn { padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(0,0,0,.3); color: var(--text); cursor: pointer; font-size: .75rem; transition: all .15s; }
+    .slot-btn:hover { border-color: var(--accent); }
+    .slot-btn.equipped { background: rgba(110,231,183,.2); border-color: var(--accent); color: var(--accent); }
+
+    /* Center — 3D Viewport */
+    #viewport { position: relative; background: #000; }
+    #viewport canvas { display: block; width: 100%; height: 100%; }
+    #loadingOverlay { position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: rgba(11,16,32,.9); z-index: 10; }
+    #loadingOverlay.hidden { display: none; }
+    #loadingOverlay .spinner { width: 40px; height: 40px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loadingOverlay p { color: var(--muted); margin-top: 12px; font-size: .85rem; }
+
+    /* Right Panel — Stats + Combat */
+    #rightPanel { grid-row: 2/4; }
+    .attr-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .attr-row label { font-size: .75rem; min-width: 30px; font-weight: 600; }
+    .attr-row input[type=range] { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 2px; }
+    .attr-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px;
+      border-radius: 50%; background: var(--accent); cursor: pointer; }
+    .attr-row .val { font-size: .75rem; font-family: monospace; min-width: 24px; text-align: right; color: var(--accent); }
+    .points-bar { text-align: center; padding: 6px; background: rgba(0,0,0,.3); border-radius: 6px;
+      font-size: .8rem; margin-bottom: 10px; font-family: monospace; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .stat-item { display: flex; justify-content: space-between; padding: 3px 6px;
+      background: rgba(0,0,0,.2); border-radius: 4px; font-size: .7rem; }
+    .stat-item .label { color: var(--muted); }
+    .stat-item .value { color: var(--accent); font-family: monospace; }
+
+    /* Bottom Panel — Hotbar + Animation + Admin */
+    #bottomPanel { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; }
+    #animPanel, #adminPanel { padding: 12px; background: linear-gradient(135deg, rgba(20,26,43,.95), rgba(20,26,43,.75));
+      border-top: 1px solid var(--border); overflow-y: auto; }
+    select, button.action-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(0,0,0,.3); color: var(--text); font-size: .8rem; cursor: pointer; }
+    select { width: 100%; margin-bottom: 6px; }
+    button.action-btn { margin: 2px; transition: all .2s; }
+    button.action-btn:hover { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .anim-list { max-height: 120px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 3px; }
+    .anim-btn { padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px;
+      background: rgba(0,0,0,.2); color: var(--muted); cursor: pointer; font-size: .7rem; transition: all .15s; }
+    .anim-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .anim-btn.playing { color: var(--accent); border-color: var(--accent); background: rgba(110,231,183,.15); }
+
+    .combat-log { font-family: monospace; font-size: .65rem; color: var(--muted); max-height: 80px;
+      overflow-y: auto; background: rgba(0,0,0,.3); border-radius: 4px; padding: 6px; margin-top: 6px; }
+    .combat-log .crit { color: #fbbf24; }
+    .combat-log .block { color: #3b82f6; }
+
+    /* Saved character list */
+    .saved-char { display: flex; align-items: center; gap: 6px; padding: 6px 8px; margin-bottom: 3px;
+      border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,.2);
+      cursor: pointer; transition: all .2s; font-size: .8rem; }
+    .saved-char:hover { border-color: var(--accent); }
+    .saved-char.active { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .saved-char .char-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .saved-char .char-race { color: var(--muted); font-size: .7rem; }
+    .saved-char .char-delete { color: var(--danger); cursor: pointer; font-size: .7rem;
+      padding: 2px 4px; border-radius: 3px; }
+    .saved-char .char-delete:hover { background: rgba(239,68,68,.2); }
+
+    /* Tab System */
+    .tab-bar { display: flex; gap: 1px; border-bottom: 2px solid var(--border); margin-bottom: 8px; flex-wrap: wrap; }
+    .tab-btn { padding: 5px 8px; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0;
+      background: transparent; color: var(--muted); cursor: pointer; font-size: .65rem; transition: all .2s;
+      font-family: 'Cinzel', serif; white-space: nowrap; }
+    .tab-btn:hover { color: var(--text); background: rgba(110,231,183,.05); }
+    .tab-btn.active { color: var(--accent); background: rgba(110,231,183,.1); border-color: var(--border); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Class card */
+    .class-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px;
+      background: rgba(0,0,0,.2); cursor: pointer; transition: all .2s; }
+    .class-card:hover { border-color: var(--accent); }
+    .class-card.selected { border-color: var(--accent); background: rgba(110,231,183,.08); }
+    .class-card .class-header { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; }
+    .class-card .class-desc { font-size: .7rem; color: var(--muted); margin-top: 4px; }
+
+    /* Skill tree */
+    .tree-section { margin-bottom: 10px; }
+    .tree-header { font-size: .75rem; font-weight: 600; color: var(--text); padding: 4px 6px;
+      background: rgba(0,0,0,.3); border-radius: 4px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .skill-node { display: flex; align-items: center; gap: 6px; padding: 4px 8px; margin-bottom: 2px;
+      border-left: 2px solid var(--border); font-size: .7rem; transition: all .15s; }
+    .skill-node:hover { border-left-color: var(--accent); background: rgba(110,231,183,.03); }
+    .skill-node .skill-lvl { font-size: .6rem; color: var(--muted); min-width: 28px; font-family: monospace; }
+    .skill-node .skill-name { color: var(--text); flex: 1; }
+    .skill-node .skill-cost { font-size: .6rem; color: var(--accent); font-family: monospace; }
+    .skill-node .skill-desc { display: none; }
+    .skill-node:hover .skill-desc { display: block; position: absolute; z-index: 20; background: var(--card);
+      border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; max-width: 200px;
+      font-size: .65rem; color: var(--muted); top: 100%; left: 0; }
+    .skill-node { position: relative; }
+
+    /* Profession card */
+    .prof-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px;
+      background: rgba(0,0,0,.2); }
+    .prof-header { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; margin-bottom: 4px; }
+    .prof-tier { display: flex; align-items: center; gap: 6px; padding: 3px 6px; margin-bottom: 2px;
+      font-size: .65rem; border-left: 2px solid var(--border); }
+    .prof-tier .tier-lvl { color: var(--accent); font-family: monospace; min-width: 30px; }
+    .prof-tier .tier-name { color: var(--text); min-width: 100px; }
+    .prof-tier .tier-res { color: var(--muted); font-size: .6rem; }
+
+    /* Mastery bar */
+    .mastery-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px 6px;
+      background: rgba(0,0,0,.2); border-radius: 4px; }
+    .mastery-icon { font-size: 1rem; }
+    .mastery-info { flex: 1; }
+    .mastery-name { font-size: .75rem; color: var(--text); }
+    .mastery-tier { font-size: .6rem; color: var(--accent); }
+    .mastery-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 2px; }
+    .mastery-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+    .mastery-xp { font-size: .6rem; color: var(--muted); font-family: monospace; min-width: 50px; text-align: right; }
+
+    /* Weapon type grid */
+    .wep-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 8px; }
+    .wep-type-btn { padding: 4px; border: 1px solid var(--border); border-radius: 4px;
+      background: rgba(0,0,0,.2); cursor: pointer; font-size: .6rem; text-align: center;
+      transition: all .15s; color: var(--muted); }
+    .wep-type-btn:hover { border-color: var(--accent); color: var(--text); }
+    .wep-type-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>GRUDGE CHARACTER CREATOR</h1>
+    <span style="color:var(--muted);font-size:.75rem;">v2.0</span>
+    <button class="action-btn" id="saveBuildBtn" style="margin-left:12px;">💾 Save Build</button>
+    <button class="action-btn" id="updateBuildBtn" style="display:none;">🔄 Update Build</button>
+    <span class="status" id="statusBar">Select a race to begin</span>
+    <span id="userDisplay" style="color:var(--accent);font-size:.75rem;margin-left:8px;"></span>
+  </header>
+
+  <!-- LEFT: Character Select + Equipment -->
+  <div class="panel" id="leftPanel">
+    <h3>My Characters <span id="charCount" style="font-size:.7rem;color:var(--muted);">(0)</span></h3>
+    <div id="savedCharactersList" style="margin-bottom:10px;">
+      <p style="color:var(--muted);font-size:.8rem;">Loading...</p>
+    </div>
+    <h3>Faction / Race</h3>
+    <div id="raceSelector"></div>
+    <h3 style="margin-top:14px;">Equipment</h3>
+    <div id="equipmentPanel"><p style="color:var(--muted);font-size:.8rem;">Load a character first</p></div>
+  </div>
+
+  <!-- CENTER: 3D Viewport -->
+  <div id="viewport">
+    <div id="loadingOverlay">
+      <div class="spinner"></div>
+      <p id="loadingText">Select a faction race...</p>
+    </div>
+  </div>
+
+  <!-- RIGHT: Tabbed Panel -->
+  <div class="panel" id="rightPanel">
+    <div class="tab-bar" id="mainTabBar">
+      <button class="tab-btn active" data-tab="tabCharacter">Character</button>
+      <button class="tab-btn" data-tab="tabClassSkills">Class</button>
+      <button class="tab-btn" data-tab="tabWeaponSkills">Wpn Skills</button>
+      <button class="tab-btn" data-tab="tabProfessions">Professions</button>
+      <button class="tab-btn" data-tab="tabMastery">Mastery</button>
+    </div>
+
+    <!-- Tab: Character (attrs + stats + combat) -->
+    <div class="tab-content active" id="tabCharacter">
+      <h3>Attributes <span id="pointsDisplay" class="points-bar">0 / 160</span></h3>
+      <div id="attributeSliders"></div>
+      <h3>Derived Stats</h3>
+      <div class="stat-grid" id="derivedStats"></div>
+      <h3 style="margin-top:10px;">Combat Test</h3>
+      <button class="action-btn" id="combatTestBtn" style="width:100%;">Attack Test Dummy</button>
+      <div class="combat-log" id="combatLog">Click "Attack Test Dummy" to simulate...</div>
+    </div>
+
+    <!-- Tab: Class Skills -->
+    <div class="tab-content" id="tabClassSkills">
+      <h3>Choose Class</h3>
+      <div id="classSelector"></div>
+      <div id="classSkillTrees"><p style="color:var(--muted);font-size:.8rem;">Select a class above</p></div>
+    </div>
+
+    <!-- Tab: Weapon Skills -->
+    <div class="tab-content" id="tabWeaponSkills">
+      <h3>Weapon Type</h3>
+      <div class="wep-type-grid" id="weaponTypeGrid"></div>
+      <div id="weaponSkillTree"><p style="color:var(--muted);font-size:.8rem;">Select a weapon type</p></div>
+    </div>
+
+    <!-- Tab: Professions -->
+    <div class="tab-content" id="tabProfessions">
+      <h3>Harvesting Professions</h3>
+      <div id="professionsList"></div>
+    </div>
+
+    <!-- Tab: Weapon Mastery -->
+    <div class="tab-content" id="tabMastery">
+      <h3>Weapon Mastery</h3>
+      <p style="color:var(--muted);font-size:.7rem;margin-bottom:8px;">XP earned per weapon type through combat use</p>
+      <div id="masteryList"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: Hotbar + Animations + Admin -->
+  <div id="bottomPanel">
+    <div id="hotbarPanel" style="padding:12px;background:linear-gradient(135deg,rgba(20,26,43,.95),rgba(20,26,43,.75));border-top:1px solid var(--border);overflow-y:auto;">
+      <h3>Combat Hotbar</h3>
+      <div id="hotbarDisplay"><p style="color:var(--muted);font-size:.7rem;">Equip a weapon to see hotbar</p></div>
+      <div style="margin-top:6px;font-size:.6rem;color:var(--muted);">
+        <b>1-4</b> Skills • <b>Q</b> Block • <b>E</b> Dodge • <b>Z</b> Battle Cry • <b>Tab</b> Mode • <b>X</b> Sheath
+      </div>
+    </div>
+    <div id="animPanel">
+      <h3>Animations</h3>
+      <select id="weaponPackSelect"><option value="">— Select Weapon Pack —</option></select>
+      <div class="anim-list" id="animList"></div>
+      <div style="margin-top:6px;display:flex;gap:4px;">
+        <button class="action-btn" id="animPause">⏸ Pause</button>
+        <button class="action-btn" id="animStop">⏹ Stop</button>
+        <label style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto;">
+          Speed <input type="range" min="0.1" max="3" step="0.1" value="1" id="animSpeed" style="width:60px;">
+          <span id="animSpeedVal">1.0x</span>
+        </label>
+      </div>
+    </div>
+    <div id="adminPanel">
+      <h3>Admin Panel</h3>
+      <button class="action-btn" id="spawnDummy" style="width:100%;margin-bottom:4px;">Spawn Test Dummy</button>
+      <button class="action-btn" id="toggleWireframe" style="width:100%;margin-bottom:4px;">Toggle Wireframe</button>
+      <button class="action-btn" id="toggleSkeleton" style="width:100%;margin-bottom:4px;">Toggle Skeleton Helper</button>
+      <button class="action-btn" id="showAllParts" style="width:100%;margin-bottom:4px;">Show All Equipment</button>
+      <button class="action-btn" id="resetCamera" style="width:100%;margin-bottom:4px;">Reset Camera</button>
+      <hr style="border-color:#333;margin:8px 0;">
+      <button class="action-btn" id="togglePostFX" style="width:100%;margin-bottom:4px;">Toggle PostFX</button>
+      <button class="action-btn" id="startBossFight" style="width:100%;margin-bottom:4px;background:#8b2020;">⚔️ Boss Fight Arena</button>
+      <button class="action-btn" id="listBones" style="width:100%;margin-bottom:4px;">List Bones (console)</button>
+      <button class="action-btn" onclick="window.open('https://molochdagod.github.io/ObjectStore/ItemBrowser.html','_blank')" style="width:100%;">
+        Open Item Browser ↗
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js via ES Module import map -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
