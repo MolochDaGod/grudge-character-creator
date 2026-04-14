@@ -245,4 +245,69 @@ export class EquipmentManager {
   get meshCount() {
     return this._allMeshes.length;
   }
+
+  // ── External Weapon Model Loading ───────────────────────────
+
+  /**
+   * Load an external weapon FBX and attach it to a bone container.
+   * @param {FBXLoader} loader - Three.js FBXLoader instance
+   * @param {string} url - URL to the weapon FBX file
+   * @param {string} boneKey - 'rightHand', 'leftHand', or 'leftShield'
+   * @param {Object} [opts] - { scale, offset, rotation }
+   * @returns {Promise<THREE.Object3D>} The attached weapon mesh
+   */
+  async loadExternalWeapon(loader, url, boneKey = 'rightHand', opts = {}) {
+    const bone = this.bones[boneKey];
+    if (!bone) {
+      console.warn(`Bone container '${boneKey}' not found`);
+      return null;
+    }
+
+    // Remove previous external weapon on this bone
+    if (this._externalWeapons?.[boneKey]) {
+      bone.remove(this._externalWeapons[boneKey]);
+    }
+    if (!this._externalWeapons) this._externalWeapons = {};
+
+    try {
+      const fbx = await new Promise((resolve, reject) => {
+        loader.load(url, resolve, undefined, reject);
+      });
+
+      // Scale to reasonable weapon size
+      const scale = opts.scale || 0.01; // FBX models often need scaling
+      fbx.scale.setScalar(scale);
+
+      // Apply optional offset and rotation
+      if (opts.offset) fbx.position.set(opts.offset.x || 0, opts.offset.y || 0, opts.offset.z || 0);
+      if (opts.rotation) fbx.rotation.set(opts.rotation.x || 0, opts.rotation.y || 0, opts.rotation.z || 0);
+
+      // Enable shadows
+      fbx.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      bone.add(fbx);
+      this._externalWeapons[boneKey] = fbx;
+      return fbx;
+    } catch (err) {
+      console.error(`Failed to load external weapon: ${url}`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Remove all external weapons from bone containers.
+   */
+  removeAllExternalWeapons() {
+    if (!this._externalWeapons) return;
+    for (const [boneKey, mesh] of Object.entries(this._externalWeapons)) {
+      const bone = this.bones[boneKey];
+      if (bone && mesh) bone.remove(mesh);
+    }
+    this._externalWeapons = {};
+  }
 }

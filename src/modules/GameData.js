@@ -335,6 +335,145 @@ export const WEAPON_TYPES = {
 };
 
 // ══════════════════════════════════════════════════════════════
+// WEAPON → ANIMATION PACK MAPPING
+// Connects each weapon type to its animation pack from FactionRegistry
+// ══════════════════════════════════════════════════════════════
+export const WEAPON_ANIM_MAP = {
+  // 1H + Shield
+  sword:        { animPack: 'pro_sword_shield', drawAnim: 'draw sword 1.fbx', sheathAnim: 'sheath sword 1.fbx', idleAnim: 'sword and shield idle.fbx', bone: 'R_hand' },
+  shield:       { animPack: 'pro_sword_shield', drawAnim: null, sheathAnim: null, idleAnim: 'sword and shield block idle.fbx', bone: 'L_shield' },
+  // 2H Melee
+  '2h_sword':   { animPack: 'great_sword', drawAnim: 'draw a great sword 1.fbx', sheathAnim: 'draw a great sword 2.fbx', idleAnim: 'great sword idle.fbx', bone: 'R_hand' },
+  axe:          { animPack: 'pro_melee_axe', drawAnim: 'standing disarm over shoulder.fbx', sheathAnim: 'standing disarm underarm.fbx', idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  '2h_axe':     { animPack: 'pro_melee_axe', drawAnim: 'standing disarm over shoulder.fbx', sheathAnim: 'standing disarm underarm.fbx', idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  hammer:       { animPack: '2h_melee', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  '2h_hammer':  { animPack: '2h_melee', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  mace:         { animPack: '2h_melee', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  dagger:       { animPack: '1h_sword_shield', drawAnim: 'draw sword 1.fbx', sheathAnim: 'sheath sword 1.fbx', idleAnim: 'sword and shield idle.fbx', bone: 'R_hand' },
+  spear:        { animPack: '2h_melee', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  // Ranged
+  bow:          { animPack: 'pro_longbow', drawAnim: 'standing equip bow.fbx', sheathAnim: 'standing disarm bow.fbx', idleAnim: 'standing idle 01.fbx', bone: 'L_hand' },
+  crossbow:     { animPack: 'rifle_crossbow', drawAnim: null, sheathAnim: null, idleAnim: 'rifle aiming idle.fbx', bone: 'L_hand' },
+  gun:          { animPack: 'advanced_gun', drawAnim: null, sheathAnim: null, idleAnim: 'idle.fbx', bone: 'R_hand' },
+  // Magic
+  staff:        { animPack: 'pro_magic', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  wand:         { animPack: 'magic', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'R_hand' },
+  tome:         { animPack: 'pro_magic', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'L_hand' },
+  offhand_relic:{ animPack: 'pro_magic', drawAnim: null, sheathAnim: null, idleAnim: 'standing idle.fbx', bone: 'L_hand' },
+};
+
+// Bone container names for weapon attachment
+export const WEAPON_BONE_MAP = {
+  R_hand:   'R_hand_container',
+  L_hand:   'L_hand_container',
+  L_shield: 'L_shield_container',
+};
+
+// Combat actions per weapon animation pack — maps hotbar slots to animation files
+export const COMBAT_ACTIONS = {
+  pro_sword_shield: {
+    slot1: { name: 'Slash',   file: 'sword and shield attack.fbx' },
+    slot2: { name: 'Slash 2', file: 'sword and shield attack (2).fbx' },
+    slot3: { name: 'Kick',    file: 'sword and shield kick.fbx' },
+    slot4: { name: 'Power',   file: 'sword and shield power up.fbx' },
+    block: { name: 'Block',   file: 'sword and shield block.fbx' },
+    dodge: { name: 'Dodge',   file: 'sword and shield strafe.fbx' },
+    death: { name: 'Death',   file: 'sword and shield death.fbx' },
+    run:   { name: 'Run',     file: 'sword and shield run.fbx' },
+  },
+  great_sword: {
+    slot1: { name: 'Slash',     file: 'great sword slash.fbx' },
+    slot2: { name: 'Spin',      file: 'great sword high spin attack.fbx' },
+    slot3: { name: 'Kick',      file: 'great sword kick.fbx' },
+    slot4: { name: 'Slide Atk', file: 'great sword slide attack.fbx' },
+    block: { name: 'Block',     file: 'great sword blocking.fbx' },
+    dodge: { name: 'Dodge',     file: 'great sword strafe.fbx' },
+    death: { name: 'Death',     file: 'two handed sword death.fbx' },
+    run:   { name: 'Run',       file: 'great sword run.fbx' },
+  },
+  pro_melee_axe: {
+    slot1: { name: 'Horizontal', file: 'standing melee attack horizontal.fbx' },
+    slot2: { name: 'Downward',   file: 'standing melee attack downward.fbx' },
+    slot3: { name: 'Combo 1',    file: 'standing melee combo attack ver. 1.fbx' },
+    slot4: { name: 'Spin 360',   file: 'standing melee attack 360 high.fbx' },
+    block: { name: 'Block',      file: 'standing block idle.fbx' },
+    dodge: { name: 'Kick',       file: 'standing melee attack kick ver. 1.fbx' },
+    death: { name: 'Death',      file: null },
+    run:   { name: 'Run',        file: null },
+  },
+  '2h_melee': {
+    slot1: { name: 'Horizontal', file: 'standing melee attack horizontal.fbx' },
+    slot2: { name: 'Backhand',   file: 'standing melee attack backhand.fbx' },
+    slot3: { name: 'Combo',      file: 'standing melee combo attack ver. 1.fbx' },
+    slot4: { name: 'Jump Atk',   file: 'standing melee run jump attack.fbx' },
+    block: { name: 'Block',      file: 'standing block idle.fbx' },
+    dodge: { name: 'Taunt',      file: 'standing taunt battlecry.fbx' },
+    death: { name: 'Death',      file: null },
+    run:   { name: 'Run',        file: 'standing run forward.fbx' },
+  },
+  pro_longbow: {
+    slot1: { name: 'Shoot',   file: 'standing aim recoil.fbx' },
+    slot2: { name: 'Dive',    file: 'standing dive forward.fbx' },
+    slot3: { name: 'Kick',    file: 'standing melee kick.fbx' },
+    slot4: { name: 'Punch',   file: 'standing melee punch.fbx' },
+    block: { name: 'Block',   file: 'standing block.fbx' },
+    dodge: { name: 'Dodge',   file: 'standing dodge forward.fbx' },
+    death: { name: 'Death',   file: 'standing death forward 01.fbx' },
+    run:   { name: 'Run',     file: 'standing run forward.fbx' },
+  },
+  rifle_crossbow: {
+    slot1: { name: 'Fire',    file: 'firing rifle.fbx' },
+    slot2: { name: 'Reload',  file: 'reloading.fbx' },
+    slot3: { name: 'Grenade', file: 'toss grenade.fbx' },
+    slot4: { name: 'Hit',     file: 'hit reaction.fbx' },
+    block: { name: 'Aim',     file: 'rifle aiming idle.fbx' },
+    dodge: { name: 'Strafe',  file: 'strafe left.fbx' },
+    death: { name: 'Death',   file: null },
+    run:   { name: 'Run',     file: 'rifle run.fbx' },
+  },
+  advanced_gun: {
+    slot1: { name: 'Aim',     file: 'idle aiming.fbx' },
+    slot2: { name: 'Sprint',  file: 'sprint forward.fbx' },
+    slot3: { name: 'Turn L',  file: 'turn 90 left.fbx' },
+    slot4: { name: 'Turn R',  file: 'turn 90 right.fbx' },
+    block: { name: 'Aim Idle',file: 'idle aiming.fbx' },
+    dodge: { name: 'Dodge',   file: 'run left.fbx' },
+    death: { name: 'Death',   file: 'death from front headshot.fbx' },
+    run:   { name: 'Run',     file: 'run forward.fbx' },
+  },
+  pro_magic: {
+    slot1: { name: '1H Cast',  file: 'standing 1H cast spell 01.fbx' },
+    slot2: { name: '2H Cast',  file: 'Standing 2H Cast Spell 01.fbx' },
+    slot3: { name: 'Area Atk', file: 'Standing 2H Magic Area Attack 01.fbx' },
+    slot4: { name: 'Magic 3',  file: 'Standing 2H Magic Attack 03.fbx' },
+    block: { name: 'Crouch',   file: 'Crouch Idle.fbx' },
+    dodge: { name: 'Dodge',    file: 'Crouch Walk Forward.fbx' },
+    death: { name: 'Death',    file: null },
+    run:   { name: 'Run',      file: null },
+  },
+  magic: {
+    slot1: { name: '1H Cast',  file: 'Standing 1H Magic Attack 01.fbx' },
+    slot2: { name: '2H Area',  file: 'Standing 2H Magic Area Attack 02.fbx' },
+    slot3: { name: 'React',    file: 'Standing React Large From Front.fbx' },
+    slot4: { name: 'Jump',     file: 'Standing Jump.fbx' },
+    block: { name: 'Idle 2',   file: 'standing idle 02.fbx' },
+    dodge: { name: 'Turn',     file: 'Standing Turn Left 90.fbx' },
+    death: { name: 'Death',    file: 'Standing React Death Backward.fbx' },
+    run:   { name: 'Run',      file: 'Standing Run Forward.fbx' },
+  },
+  '1h_sword_shield': {
+    slot1: { name: 'Slash',   file: 'sword and shield attack.fbx' },
+    slot2: { name: 'Slash 2', file: 'sword and shield attack (2).fbx' },
+    slot3: { name: 'Slash 3', file: 'sword and shield attack (3).fbx' },
+    slot4: { name: 'Slash 4', file: 'sword and shield attack (4).fbx' },
+    block: { name: 'Block',   file: 'sword and shield block.fbx' },
+    dodge: { name: 'Strafe',  file: 'sword and shield strafe.fbx' },
+    death: { name: 'Death',   file: 'sword and shield death.fbx' },
+    run:   { name: 'Run',     file: 'sword and shield run.fbx' },
+  },
+};
+
+// ══════════════════════════════════════════════════════════════
 // WEAPON SKILL TREES (per weapon type)
 // ══════════════════════════════════════════════════════════════
 function generateWeaponSkills(weaponName) {

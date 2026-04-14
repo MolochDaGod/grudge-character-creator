@@ -14,7 +14,9 @@ import { characterStore } from './modules/CharacterStore.js';
 import {
   CLASSES, CLASS_SKILLS, PROFESSIONS, WORGE_FORMS, MAGIC_VFX,
   WEAPON_TYPES, WEAPON_SKILLS, MASTERY_TIERS, getMasteryProgress,
+  WEAPON_ANIM_MAP, COMBAT_ACTIONS,
 } from './modules/GameData.js';
+import { WeaponAnimController } from './modules/WeaponAnimController.js';
 
 // ════════════════════════════════════════════════════════════
 // State
@@ -34,6 +36,9 @@ const dummies = [];
 // Track current editor state for persistence
 let currentFactionId = null;
 let currentRaceId = null;
+
+// Weapon animation controller
+let weaponCtrl = null;
 
 // ════════════════════════════════════════════════════════════
 // Scene Setup
@@ -179,8 +184,13 @@ async function loadCharacterModel(raceConfig) {
     equipMgr = new EquipmentManager(raceConfig.prefix);
     const slots = equipMgr.catalog(fbx);
 
+    // Weapon Animation Controller — binds weapon equips to animation packs
+    weaponCtrl = new WeaponAnimController(mixer, fbxLoader, updateStatus);
+    weaponCtrl.onChange(() => buildHotbarUI());
+
     updateStatus(`Loaded ${raceConfig.name}: ${equipMgr.meshCount} equipment meshes found`);
     buildEquipmentUI(slots);
+    buildHotbarUI();
     overlay.classList.add('hidden');
 
   } catch (err) {
@@ -293,18 +303,32 @@ function buildEquipmentUI(slots) {
   }
   container.innerHTML = html;
 
-  container.addEventListener('click', (e) => {
+  container.addEventListener('click', async (e) => {
     const btn = e.target.closest('.slot-btn');
     if (!btn) return;
     const { slot, variant } = btn.dataset;
 
     if (variant === '_none') {
       equipMgr.unequip(slot);
+      // If unequipping a weapon, sheath animations
+      if (WEAPON_ANIM_MAP[slot] && weaponCtrl) {
+        weaponCtrl.sheathWeapon();
+      }
     } else {
       // Use equipWeapon for weapon/shield slots for mutual exclusion
       const isWeaponSlot = ['axe','hammer','sword','pick','spear','bow','staff','shield'].includes(slot);
       if (isWeaponSlot) {
         equipMgr.equipWeapon(slot, variant);
+        // Auto-switch to weapon's animation pack
+        if (WEAPON_ANIM_MAP[slot] && weaponCtrl && currentModel && mixer) {
+          await weaponCtrl.equipWeapon(slot, WEAPON_ANIMATION_PACKS, currentModel);
+          // Auto-select the animation pack in the dropdown
+          const packSelect = document.getElementById('weaponPackSelect');
+          if (packSelect) {
+            packSelect.value = WEAPON_ANIM_MAP[slot].animPack;
+            packSelect.dispatchEvent(new Event('change'));
+          }
+        }
       } else {
         equipMgr.equip(slot, variant);
       }
@@ -848,7 +872,88 @@ buildClassSelector();
 buildWeaponTypeGrid();
 buildProfessionsPanel();
 buildMasteryPanel();
+setupCombatHotkeys();
 setupPersistence();
 animate();
 updateStatus('Ready — select a faction race to load');
 initPersistence();
+
+// ════════════════════════════════════════════════════════════
+// Combat Hotkeys & Hotbar
+// ════════════════════════════════════════════════════════════
+function setupCombatHotkeys() {
+  window.addEventListener('keydown', (e) => {
+    if (e.target !== document.body) return;
+    if (!weaponCtrl) return;
+
+    switch (e.code) {
+      case 'Digit1': weaponCtrl.triggerAction('slot1'); break;
+      case 'Digit2': weaponCtrl.triggerAction('slot2'); break;
+      case 'Digit3': weaponCtrl.triggerAction('slot3'); break;
+      case 'Digit4': weaponCtrl.triggerAction('slot4'); break;
+      case 'KeyQ':   weaponCtrl.triggerAction('block'); break;
+      case 'KeyE':   weaponCtrl.triggerAction('dodge'); break;
+      case 'KeyZ':   // Z-key combat mechanic
+        updateStatus('⚡ Battle Cry!');
+        weaponCtrl.triggerAction('slot4');
+        break;
+      case 'Tab':
+        e.preventDefault();
+        weaponCtrl.toggleMode();
+        buildHotbarUI();
+        break;
+      case 'KeyX':
+        weaponCtrl.sheathWeapon();
+        buildHotbarUI();
+        break;
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'KeyQ' && weaponCtrl) {
+      weaponCtrl.releaseBlock();
+    }
+  });
+}
+
+function buildHotbarUI() {
+  const container = document.getElementById('hotbarDisplay');
+  if (!container) return;
+
+  if (!weaponCtrl || !weaponCtrl.equippedWeaponType) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:.7rem;">Equip a weapon to see hotbar</p>';
+    return;
+  }
+
+  const hotbar = weaponCtrl.getHotbar();
+  if (!hotbar) { container.innerHTML = ''; return; }
+
+  const modeLabel = weaponCtrl.mode === 'combat' ? '⚔️ Combat' : '🪨 Harvest';
+  const stateLabel = weaponCtrl.state;
+  const wpnName = WEAPON_TYPES[weaponCtrl.equippedWeaponType]?.name || weaponCtrl.equippedWeaponType;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:.7rem;color:var(--accent);">${wpnName}</span>
+      <span style="font-size:.6rem;color:var(--muted);">${modeLabel} • ${stateLabel}</span>
+      <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">Tab=mode X=sheath</span>
+    </div>
+    <div style="display:flex;gap:3px;">
+      ${['slot1','slot2','slot3','slot4'].map((key, i) => {
+        const a = hotbar[key];
+        return `<button class="action-btn" onclick="window._wc?.triggerAction('${key}')" style="flex:1;font-size:.65rem;" title="Key ${i+1}">
+          <b>${i+1}</b> ${a?.name || '—'}
+        </button>`;
+      }).join('')}
+      <button class="action-btn" onclick="window._wc?.triggerAction('block')" style="font-size:.65rem;" title="Hold Q">
+        Q ${hotbar.block?.name || 'Block'}
+      </button>
+      <button class="action-btn" onclick="window._wc?.triggerAction('dodge')" style="font-size:.65rem;" title="E">
+        E ${hotbar.dodge?.name || 'Dodge'}
+      </button>
+    </div>
+  `;
+
+  // Expose controller for hotbar button onclick
+  window._wc = weaponCtrl;
+}

@@ -76,8 +76,8 @@
     .stat-item .label { color: var(--muted); }
     .stat-item .value { color: var(--accent); font-family: monospace; }
 
-    /* Bottom Panel — Animation + Admin */
-    #bottomPanel { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
+    /* Bottom Panel — Hotbar + Animation + Admin */
+    #bottomPanel { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; }
     #animPanel, #adminPanel { padding: 12px; background: linear-gradient(135deg, rgba(20,26,43,.95), rgba(20,26,43,.75));
       border-top: 1px solid var(--border); overflow-y: auto; }
     select, button.action-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
@@ -252,8 +252,15 @@
     </div>
   </div>
 
-  <!-- BOTTOM: Animations + Admin -->
+  <!-- BOTTOM: Hotbar + Animations + Admin -->
   <div id="bottomPanel">
+    <div id="hotbarPanel" style="padding:12px;background:linear-gradient(135deg,rgba(20,26,43,.95),rgba(20,26,43,.75));border-top:1px solid var(--border);overflow-y:auto;">
+      <h3>Combat Hotbar</h3>
+      <div id="hotbarDisplay"><p style="color:var(--muted);font-size:.7rem;">Equip a weapon to see hotbar</p></div>
+      <div style="margin-top:6px;font-size:.6rem;color:var(--muted);">
+        <b>1-4</b> Skills • <b>Q</b> Block • <b>E</b> Dodge • <b>Z</b> Battle Cry • <b>Tab</b> Mode • <b>X</b> Sheath
+      </div>
+    </div>
     <div id="animPanel">
       <h3>Animations</h3>
       <select id="weaponPackSelect"><option value="">— Select Weapon Pack —</option></select>
