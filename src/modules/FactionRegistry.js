@@ -1,9 +1,8 @@
 /**
- * FactionRegistry — Complete map of all 6 faction/race combos.
+ * FactionRegistry — Faction/race/character model map.
  *
- * Each race's customizable FBX has ALL equipment baked as child meshes.
- * The EquipmentManager reads this registry to know what prefix to strip
- * and which slot categories to expect.
+ * Supports both FBX (legacy baked equipment) and GLTF (newer rigged models).
+ * SmartLoader auto-detects format. GLTF models are in ADDITIONAL_MODELS/.
  *
  * Path base:  D:\Games\Models\grudgeracecharacters\factioncharacters\
  */
@@ -57,54 +56,28 @@ export const SLOT_GROUPS = {
   utility:  ['bag', 'wood', 'quiver'],
 };
 
+// ── GLTF character models (ADDITIONAL_MODELS/) ─────────────
+const MODELS = `${BASE}/ADDITIONAL_MODELS`;
+
 export const FACTIONS = {
   crusade: {
     name: 'Crusade',
     color: '#c9a04e',
     races: {
-      human: {
-        name: 'Human',
-        prefix: 'WK_',
-        model:    `${BASE}/Crusade/Human/models/WK_Characters_customizable.FBX`,
-        cavalry:  `${BASE}/Crusade/Human/models/WK_Cavalry_customizable.FBX`,
-        catapult: `${BASE}/Crusade/Human/models/WK_Catapult.FBX`,
-        textures: {
-          standard: `${BASE}/Crusade/Human/models/Materials/textures/WK_Standard_Units.tga`,
-          black:    `${BASE}/Crusade/Human/models/Materials/Colors/textures/WK_StandardUnits_black.tga`,
-          blue:     `${BASE}/Crusade/Human/models/Materials/Colors/textures/WK_StandardUnits_blue.tga`,
-          brown:    `${BASE}/Crusade/Human/models/Materials/Colors/textures/WK_StandardUnits_brown.tga`,
-          green:    `${BASE}/Crusade/Human/models/Materials/Colors/textures/WK_StandardUnits_green.tga`,
-          red:      `${BASE}/Crusade/Human/models/Materials/Colors/textures/WK_StandardUnits_red.tga`,
-          white:    `${BASE}/Crusade/Human/models/Materials/Colors/textures/WK_StandardUnits_white.tga`,
-        },
-        extraEquipment: [
-          `${BASE}/Crusade/Human/models/extra models/equipment/WK_weapon_staff_B.FBX`,
-          `${BASE}/Crusade/Human/models/extra models/equipment/WK_weapon_sword_A.FBX`,
-        ],
-        animations: {
-          catapult: `${BASE}/Crusade/Human/animation/Catapult/`,
-          cavalry:  `${BASE}/Crusade/Human/animation/Cavalry/`,
-        },
+      knight: {
+        name: 'Eternal Knight',
+        prefix: '',
+        model: `${MODELS}/eternal_knight/scene.gltf`,
       },
-      barbarian: {
-        name: 'Barbarian',
-        prefix: 'BRB_',
-        model:    `${BASE}/Crusade/Barbarians/models/BRB_Characters_customizable.FBX`,
-        cavalry:  `${BASE}/Crusade/Barbarians/models/BRB_Cavalry_customizable.FBX`,
-        textures: {
-          standard: `${BASE}/Crusade/Barbarians/models/Materials/BRB_StandardUnits_texture.tga`,
-          brown:    `${BASE}/Crusade/Barbarians/models/Materials/Color/textures/BRB_Standard_Units_brown.tga`,
-        },
-        extraEquipment: [
-          `${BASE}/Crusade/Barbarians/models/extra models/Equipment/BRB_weapon_hammer_B.FBX`,
-          `${BASE}/Crusade/Barbarians/models/extra models/Equipment/BRB_weapon_spear.FBX`,
-          `${BASE}/Crusade/Barbarians/models/extra models/Equipment/BRB_weapon_staff_B.FBX`,
-          `${BASE}/Crusade/Barbarians/models/extra models/Equipment/BRB_weapon_sword_B.FBX`,
-        ],
-        animations: {
-          mage:     `${BASE}/Crusade/Barbarians/animation/Mage/`,
-          spearman: `${BASE}/Crusade/Barbarians/animation/Spearman/`,
-        },
+      gladiator: {
+        name: 'Human Gladiator',
+        prefix: '',
+        model: `${MODELS}/human_gladiator/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
+      },
+      squire: {
+        name: 'Squire',
+        prefix: '',
+        model: `${MODELS}/squire/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
       },
     },
   },
@@ -113,46 +86,10 @@ export const FACTIONS = {
     name: 'Fabled',
     color: '#7ec8e3',
     races: {
-      elf: {
-        name: 'Elf',
-        prefix: 'ELF_',
-        model:    `${BASE}/Fabled/Elves/models/ELF_Characters_customizable.FBX`,
-        cavalry:  `${BASE}/Fabled/Elves/models/ELF_Cavalry_customizable.FBX`,
-        siege:    `${BASE}/Fabled/Elves/models/ELF_BoltThrower.FBX`,
-        textures: {
-          highElf:  `${BASE}/Fabled/Elves/models/Materials/ELF_HighElves_Texture.tga`,
-          darkElf:  `${BASE}/Fabled/Elves/models/Materials/ELF_DarkElves_Texture.tga`,
-          woodElf:  `${BASE}/Fabled/Elves/models/Materials/ELF_WoodElves_Texture.tga`,
-          darkBlue: `${BASE}/Fabled/Elves/models/Materials/Color/DarkElves/textures/ELF_DarkElves_Blue.tga`,
-          darkGreen:`${BASE}/Fabled/Elves/models/Materials/Color/DarkElves/textures/ELF_DarkElves_Green.tga`,
-          darkRed:  `${BASE}/Fabled/Elves/models/Materials/Color/DarkElves/textures/ELF_DarkElves_Red.tga`,
-          woodBrown:`${BASE}/Fabled/Elves/models/Materials/Color/WoodElves/textures/ELF_WoodElves_Brown.tga`,
-        },
-        extraEquipment: [
-          `${BASE}/Fabled/Elves/models/extra models/ELF_bolt.FBX`,
-          `${BASE}/Fabled/Elves/models/extra models/equipment/ELF_weapon_spear.FBX`,
-          `${BASE}/Fabled/Elves/models/extra models/equipment/ELF_weapon_staff_C.FBX`,
-        ],
-        animations: {
-          boltThrower:  `${BASE}/Fabled/Elves/animation/BoltThrower/`,
-          cavalryMage:  `${BASE}/Fabled/Elves/animation/Cavalry_Mage/`,
-          cavalrySpear: `${BASE}/Fabled/Elves/animation/Cavalry_Spear/`,
-        },
-      },
-      dwarf: {
-        name: 'Dwarf',
-        prefix: 'DWF_',
-        model:    `${BASE}/Fabled/Dwarves/models/DWF_Characters_customizable.FBX`,
-        cavalry:  `${BASE}/Fabled/Dwarves/models/DWF_Cavalry_customizable.FBX`,
-        textures: {
-          standard: `${BASE}/Fabled/Dwarves/models/Materials/DWF_Standard_Units.tga`,
-          brown:    `${BASE}/Fabled/Dwarves/models/Materials/Colors/Textures/DWF_Units_Brown.tga`,
-        },
-        extraEquipment: [],
-        animations: {
-          cavalry: `${BASE}/Fabled/Dwarves/animation/Cavalry/`,
-          worker:  `${BASE}/Fabled/Dwarves/animation/Worker/`,
-        },
+      goblin: {
+        name: 'Goblin',
+        prefix: '',
+        model: `${MODELS}/goblin/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
       },
     },
   },
@@ -163,45 +100,35 @@ export const FACTIONS = {
     races: {
       orc: {
         name: 'Orc',
-        prefix: 'ORC_',
-        model:    `${BASE}/Legion/Orcs/models/ORC_Characters_Customizable.FBX`,
-        cavalry:  `${BASE}/Legion/Orcs/models/ORC_Cavalry_Customizable.FBX`,
-        catapult: `${BASE}/Legion/Orcs/models/ORC_Catapult.FBX`,
-        textures: {
-          standard: `${BASE}/Legion/Orcs/models/Materials/textures/ORC_StandardUnits.tga`,
-          black:    `${BASE}/Legion/Orcs/models/Materials/color/textures/ORC_StandardUnits_black.tga`,
-          blue:     `${BASE}/Legion/Orcs/models/Materials/color/textures/ORC_StandardUnits_blue.tga`,
-          brown:    `${BASE}/Legion/Orcs/models/Materials/color/textures/ORC_StandardUnits_brown.tga`,
-          green:    `${BASE}/Legion/Orcs/models/Materials/color/textures/ORC_StandardUnits_green.tga`,
-          red:      `${BASE}/Legion/Orcs/models/Materials/color/textures/ORC_StandardUnits_red.tga`,
-        },
-        extraEquipment: [
-          `${BASE}/Legion/Orcs/models/extra_models/Equipment/ORC_Shield_D.FBX`,
-          `${BASE}/Legion/Orcs/models/extra_models/Equipment/ORC_weapon_Axe_A.FBX`,
-          `${BASE}/Legion/Orcs/models/extra_models/Equipment/ORC_weapon_staff_B.FBX`,
-        ],
-        animations: {
-          catapult: `${BASE}/Legion/Orcs/animation/Catapult/`,
-          cavalry:  `${BASE}/Legion/Orcs/animation/Cavalry/`,
-          worker:   `${BASE}/Legion/Orcs/animation/Worker/`,
-        },
+        prefix: '',
+        model: `${MODELS}/orc_base/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
       },
-      undead: {
-        name: 'Undead',
-        prefix: 'UD_',
-        model:    `${BASE}/Legion/Undead/models/UD_Characters_customizable.FBX`,
-        cavalry:  `${BASE}/Legion/Undead/models/UD_Cavalry_customizable.FBX`,
-        textures: {
-          standard: `${BASE}/Legion/Undead/models/Materials/UD_Standard_Units.tga`,
-          brown:    `${BASE}/Legion/Undead/models/Materials/Colors/textures/UD_Standard_Units_brown.tga`,
-        },
-        extraEquipment: [
-          `${BASE}/Legion/Undead/models/extra_models/Equipment/UD_Shield_C.FBX`,
-          `${BASE}/Legion/Undead/models/extra_models/Equipment/UD_weapon_Spear.FBX`,
-          `${BASE}/Legion/Undead/models/extra_models/Equipment/UD_weapon_staff_B.FBX`,
-          `${BASE}/Legion/Undead/models/extra_models/Equipment/UD_weapon_Sword_C.FBX`,
-        ],
-        animations: {},
+      orc_grunt: {
+        name: 'Orc Grunt',
+        prefix: '',
+        model: `${MODELS}/orc_grunt/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
+      },
+    },
+  },
+
+  worge: {
+    name: 'Worge',
+    color: '#d97706',
+    races: {
+      werewolf: {
+        name: 'Werewolf',
+        prefix: '',
+        model: `${MODELS}/worge_forms/werewolf/scene.gltf`,
+      },
+      warbear: {
+        name: 'Warbear',
+        prefix: '',
+        model: `${MODELS}/worge_forms/warbear/scene.gltf`,
+      },
+      raptor: {
+        name: 'Raptor',
+        prefix: '',
+        model: `${MODELS}/worge_forms/raptor/scene.gltf`,
       },
     },
   },
