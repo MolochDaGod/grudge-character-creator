@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { SkeletonHelper } from 'three';
+import { loadModel, loadAnimationClips, prepareModel, fbxLoader } from './modules/SmartLoader.js';
 
 import { EquipmentManager } from './modules/EquipmentManager.js';
 import { getAllRaces, WEAPON_ANIMATION_PACKS } from './modules/FactionRegistry.js';
@@ -36,7 +36,6 @@ let equipMgr = null;
 let skeletonHelper = null;
 let wireframeMode = false;
 let character = createDefaultCharacter(10);
-const fbxLoader = new FBXLoader();
 const dummies = [];
 
 // Track current editor state for persistence
@@ -69,7 +68,6 @@ function initScene() {
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
-    if (postfx) postfx.resize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -127,6 +125,7 @@ function initScene() {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
+    if (postfx) postfx.resize(container.clientWidth, container.clientHeight);
   });
 
   // Init post-processing pipeline
@@ -156,51 +155,27 @@ async function loadCharacterModel(raceConfig) {
   }
 
   try {
-    const fbx = await new Promise((resolve, reject) => {
-      fbxLoader.load(raceConfig.model, resolve, (e) => {
-        loadingText.textContent = `Loading... ${Math.floor((e.loaded / e.total) * 100)}%`;
-      }, reject);
+    const { scene: model, animations } = await loadModel(raceConfig.model, (e) => {
+      if (e.total) loadingText.textContent = `Loading... ${Math.floor((e.loaded / e.total) * 100)}%`;
     });
 
-    // Scale — FBX models from Unity are typically in cm, we need meters
-    const box = new THREE.Box3().setFromObject(fbx);
-    const height = box.max.y - box.min.y;
-    const targetHeight = 2.0;
-    const scale = targetHeight / height;
-    fbx.scale.setScalar(scale);
+    // Scale, center, shadows via SmartLoader helper
+    prepareModel(model);
 
-    // Center on ground
-    const scaledBox = new THREE.Box3().setFromObject(fbx);
-    fbx.position.y = -scaledBox.min.y;
-    fbx.position.x = -(scaledBox.min.x + scaledBox.max.x) / 2;
-    fbx.position.z = -(scaledBox.min.z + scaledBox.max.z) / 2;
-
-    // Enable shadows
-    fbx.traverse(child => {
-      if (child.isMesh || child.isSkinnedMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        if (child.material) {
-          const mats = Array.isArray(child.material) ? child.material : [child.material];
-          mats.forEach(m => { m.side = THREE.DoubleSide; });
-        }
-      }
-    });
-
-    scene.add(fbx);
-    currentModel = fbx;
+    scene.add(model);
+    currentModel = model;
 
     // Setup AnimationMixer
-    mixer = new THREE.AnimationMixer(fbx);
-    if (fbx.animations?.length > 0) {
-      fbx.animations.forEach(clip => {
+    mixer = new THREE.AnimationMixer(model);
+    if (animations.length > 0) {
+      animations.forEach(clip => {
         currentActions[clip.name] = mixer.clipAction(clip);
       });
     }
 
     // Equipment Manager
     equipMgr = new EquipmentManager(raceConfig.prefix);
-    const slots = equipMgr.catalog(fbx);
+    const slots = equipMgr.catalog(model);
 
     // Weapon Animation Controller — binds weapon equips to animation packs
     weaponCtrl = new WeaponAnimController(mixer, fbxLoader, updateStatus);
@@ -229,13 +204,11 @@ async function loadAnimation(packKey, fileName) {
   updateStatus(`Loading animation: ${fileName}`);
 
   try {
-    const fbx = await new Promise((resolve, reject) => {
-      fbxLoader.load(url, resolve, undefined, reject);
-    });
+    const clips = await loadAnimationClips(url);
 
-    if (fbx.animations?.length > 0) {
-      const clip = fbx.animations[0];
-      clip.name = fileName.replace('.fbx', '').replace('.FBX', '');
+    if (clips.length > 0) {
+      const clip = clips[0];
+      clip.name = fileName.replace(/\.(fbx|FBX|gltf|glb)$/i, '');
 
       // Store and play
       if (currentActions[clip.name]) {

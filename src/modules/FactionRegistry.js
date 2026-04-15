@@ -10,8 +10,8 @@
 
 // In production, set VITE_ASSET_BASE_URL to your object storage origin
 // e.g. https://objects.grudge-studio.com/race-characters
-// In local dev, Vite serves parent dir via fs.allow so '../' works.
-const ASSET_URL = import.meta.env.VITE_ASSET_BASE_URL || '..';
+// In local dev, Vite resolves /assets/ to the parent directory.
+const ASSET_URL = import.meta.env.VITE_ASSET_BASE_URL || '/assets';
 const BASE = `${ASSET_URL}/factioncharacters`;
 const ANIM_BASE = `${ASSET_URL}/animationsweapons`;
 

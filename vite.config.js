@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import path from 'path';
 
 export default defineConfig({
   root: '.',
@@ -6,15 +7,19 @@ export default defineConfig({
   server: {
     port: 3000,
     fs: {
-      // Allow Vite to serve files from parent dir (factioncharacters, animationsweapons)
+      // Allow Vite to serve files from parent dir (factioncharacters, animationsweapons, environment)
       allow: ['.', '..'],
+      strict: false,
     },
   },
   build: {
     outDir: 'dist',
-    rollupOptions: {
-      // Externalize all Three.js imports — resolved at runtime via importmap in index.html
-      external: (id) => id === 'three' || id.startsWith('three/'),
+  },
+  resolve: {
+    alias: {
+      'three/addons/': 'three/examples/jsm/',
+      // Allow /assets/ prefix to load from parent directory
+      '/assets': path.resolve(__dirname, '..'),
     },
   },
 });

@@ -11,3 +11,5 @@ dist/
 # Large 3D assets (loaded locally, too big for git)
 environment/boss_wukong/
 environment/scary_forest/
+
+.vercel
