@@ -878,15 +878,50 @@ function setupPersistence() {
 }
 
 async function initPersistence() {
-  try {
-    const user = await apiClient.ensureAuth();
-    document.getElementById('userDisplay').textContent = user.displayName || user.grudgeId || '';
-    await characterStore.load();
-    buildSavedCharactersList();
-  } catch (err) {
-    console.error('Persistence init failed (offline mode):', err);
+  const signInBtn = document.getElementById('signInBtn');
+  const userDisplay = document.getElementById('userDisplay');
+
+  async function onSignedIn() {
+    try {
+      const user = await apiClient.ensureAuth();
+      userDisplay.textContent = user.displayName || user.grudgeId || '';
+      signInBtn.style.display = 'none';
+      await characterStore.load();
+      buildSavedCharactersList();
+      updateStatus('Signed in as ' + (user.displayName || user.grudgeId));
+    } catch (err) {
+      console.error('Auth load failed:', err);
+      showOffline();
+    }
+  }
+
+  function showOffline() {
+    signInBtn.style.display = '';
     document.getElementById('savedCharactersList').innerHTML =
-      '<p style="color:var(--muted);font-size:.8rem;">Offline — save unavailable</p>';
+      '<p style="color:var(--muted);font-size:.8rem;">Sign in to save characters</p>';
+  }
+
+  // Manual sign-in button
+  signInBtn.addEventListener('click', async () => {
+    try {
+      await window.puter.auth.signIn();
+      await onSignedIn();
+    } catch (err) {
+      console.error('Sign-in failed:', err);
+      updateStatus('Sign-in cancelled');
+    }
+  });
+
+  // Check if already signed in (silent — no popup)
+  try {
+    if (window.puter && window.puter.auth.isSignedIn()) {
+      await onSignedIn();
+    } else {
+      showOffline();
+    }
+  } catch (err) {
+    console.error('Persistence init failed:', err);
+    showOffline();
   }
 }
 

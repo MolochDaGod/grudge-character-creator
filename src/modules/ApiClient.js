@@ -1,111 +1,155 @@
 /**
- * ApiClient — thin fetch wrapper for the Grudge Character Creator API.
+ * ApiClient — Puter-backed auth & KV storage for the Grudge Character Creator.
  *
- * Handles JWT auth via localStorage, auto-creates guest account on first use.
+ * Uses Puter SDK for authentication (puter.auth) and key-value persistence (puter.kv).
+ * Each puter ID automatically maps to a Grudge ID stored in KV.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-const TOKEN_KEY = 'grudge_token';
-const USER_KEY = 'grudge_user';
+const CHARS_KEY = 'grudge_characters';
+const PROFILE_KEY = 'grudge_profile';
+const MAX_CHARACTERS = 20;
 
 class ApiClient {
   constructor() {
-    this.token = localStorage.getItem(TOKEN_KEY);
-    try {
-      this.user = JSON.parse(localStorage.getItem(USER_KEY));
-    } catch {
-      this.user = null;
-    }
+    this.user = null;
+    this._ready = false;
   }
 
   get isLoggedIn() {
-    return !!this.token;
+    return this._ready && !!this.user;
   }
 
-  /** Ensure we have a guest token. */
+  /**
+   * Ensure Puter auth is active. Signs in if needed, then loads/creates Grudge profile.
+   */
   async ensureAuth() {
-    if (this.token) return this.user;
-    return this.createGuestAccount();
-  }
+    if (this._ready && this.user) return this.user;
 
-  /** Create a guest account and store token. */
-  async createGuestAccount(displayName) {
-    const resp = await fetch(`${API_BASE}/auth/guest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName }),
-    });
-    if (!resp.ok) throw new Error('Failed to create guest account');
-    const data = await resp.json();
-    this.token = data.token;
-    this.user = data.user;
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    return data.user;
-  }
+    // Wait for puter SDK to be available
+    const puter = window.puter;
+    if (!puter) throw new Error('Puter SDK not loaded');
 
-  /** Authenticated fetch. */
-  async _fetch(path, options = {}) {
-    await this.ensureAuth();
-    const resp = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.token}`,
-        ...options.headers,
-      },
-    });
-    if (resp.status === 401) {
-      // Token expired — re-auth
-      this.token = null;
-      localStorage.removeItem(TOKEN_KEY);
-      await this.ensureAuth();
-      return this._fetch(path, options);
+    // Check if already authenticated
+    let isSignedIn = puter.auth.isSignedIn();
+    if (!isSignedIn) {
+      // Trigger Puter sign-in
+      await puter.auth.signIn();
+      isSignedIn = puter.auth.isSignedIn();
+      if (!isSignedIn) throw new Error('Sign-in was cancelled');
     }
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ error: resp.statusText }));
-      throw new Error(err.error || 'API request failed');
+
+    // Get puter user info
+    const puterUser = await puter.auth.getUser();
+
+    // Load or create Grudge profile from Puter KV
+    let profile = null;
+    try {
+      const raw = await puter.kv.get(PROFILE_KEY);
+      if (raw) profile = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch { /* first time */ }
+
+    if (!profile) {
+      // Auto-create Grudge ID from puter username
+      const tag = (puterUser.username || 'user').slice(0, 8).toUpperCase();
+      profile = {
+        grudgeId: `GRUDGE-${tag}-${Date.now().toString(36).toUpperCase()}`,
+        puterId: puterUser.username,
+        displayName: puterUser.username || 'Warlord',
+        role: 'member',
+        createdAt: new Date().toISOString(),
+      };
+      await puter.kv.set(PROFILE_KEY, JSON.stringify(profile));
     }
-    return resp.json();
+
+    this.user = {
+      id: puterUser.uuid || puterUser.username,
+      grudgeId: profile.grudgeId,
+      displayName: profile.displayName,
+      role: profile.role,
+    };
+    this._ready = true;
+    return this.user;
   }
 
-  // ── Character CRUD ──
+  // ── Character CRUD via Puter KV ──
+
+  async _getChars() {
+    try {
+      const raw = await window.puter.kv.get(CHARS_KEY);
+      if (!raw) return [];
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch {
+      return [];
+    }
+  }
+
+  async _setChars(chars) {
+    await window.puter.kv.set(CHARS_KEY, JSON.stringify(chars));
+  }
 
   async listCharacters() {
-    const data = await this._fetch('/characters');
-    return data.characters;
+    await this.ensureAuth();
+    return this._getChars();
   }
 
   async createCharacter(character) {
-    const data = await this._fetch('/characters', {
-      method: 'POST',
-      body: JSON.stringify(character),
-    });
-    return data.character;
+    await this.ensureAuth();
+    const chars = await this._getChars();
+    if (chars.length >= MAX_CHARACTERS) {
+      throw new Error(`Max ${MAX_CHARACTERS} characters per account`);
+    }
+
+    const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const newChar = {
+      id,
+      name: character.name || `Character ${chars.length + 1}`,
+      factionId: character.factionId,
+      raceId: character.raceId,
+      equipped: character.equipped || {},
+      attrs: character.attrs || {},
+      level: character.level || 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    chars.push(newChar);
+    await this._setChars(chars);
+    return newChar;
   }
 
   async updateCharacter(id, updates) {
-    const data = await this._fetch('/characters', {
-      method: 'PUT',
-      body: JSON.stringify({ id, ...updates }),
-    });
-    return data.character;
+    await this.ensureAuth();
+    const chars = await this._getChars();
+    const idx = chars.findIndex(c => c.id === id);
+    if (idx === -1) throw new Error('Character not found');
+
+    const allowed = ['name', 'equipped', 'attrs', 'level', 'factionId', 'raceId'];
+    for (const field of allowed) {
+      if (updates[field] !== undefined) {
+        chars[idx][field] = updates[field];
+      }
+    }
+    chars[idx].updatedAt = new Date().toISOString();
+
+    await this._setChars(chars);
+    return chars[idx];
   }
 
   async deleteCharacter(id) {
-    await this._fetch('/characters', {
-      method: 'DELETE',
-      body: JSON.stringify({ id }),
-    });
+    await this.ensureAuth();
+    let chars = await this._getChars();
+    const before = chars.length;
+    chars = chars.filter(c => c.id !== id);
+    if (chars.length === before) throw new Error('Character not found');
+    await this._setChars(chars);
     return id;
   }
 
-  /** Clear local auth (logout). */
+  /** Sign out of Puter and clear local state. */
   logout() {
-    this.token = null;
     this.user = null;
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    this._ready = false;
+    try { window.puter.auth.signOut(); } catch { /* ignore */ }
   }
 }
 
