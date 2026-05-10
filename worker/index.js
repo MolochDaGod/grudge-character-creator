@@ -13,6 +13,8 @@
  *   GET /api/weapons            — all weapon model packs
  */
 
+const ASSET_VERSION = 'v2';  // Bump when re-uploading textures to bust CDN cache
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -127,7 +129,7 @@ async function getFullManifest(db) {
     factions[model.faction_id].races[model.race_id] = {
       name: model.name,
       prefix: model.prefix,
-      model: model.r2_url,
+      model: model.r2_url + '?' + ASSET_VERSION,
       format: model.format,
       skeletonType: model.skeleton_type,
       equipment: slotsByModel[model.id] || [],
