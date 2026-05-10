@@ -5,8 +5,10 @@ name = "grudge-models-worker"
 main = "worker/index.js"
 compatibility_date = "2024-12-01"
 
-# Custom domain (set up in Cloudflare dashboard)
-# routes = [{ pattern = "models.grudge-studio.com/*", zone_name = "grudge-studio.com" }]
+# Custom domain — wrangler auto-creates DNS record on deploy
+routes = [
+  { pattern = "models.grudge-studio.com/*", zone_name = "grudge-studio.com" }
+]
 
 # D1 database binding
 [[d1_databases]]

@@ -1,0 +1,12 @@
+# Grudge Studio Edge Proxy — routes subdomains to Vercel apps
+# Deploy: npx wrangler deploy -c worker/wrangler-proxy.toml
+
+name = "grudge-edge-proxy"
+main = "edge-proxy.js"
+compatibility_date = "2024-12-01"
+workers_dev = false
+
+routes = [
+  { pattern = "characters.grudge-studio.com/*", zone_name = "grudge-studio.com" },
+  { pattern = "grudachain.grudge-studio.com/*", zone_name = "grudge-studio.com" }
+]
