@@ -4,12 +4,12 @@ import { SkeletonHelper } from 'three';
 import { loadModel, loadAnimationClips, prepareModel, fbxLoader } from './modules/SmartLoader.js';
 
 import { EquipmentManager } from './modules/EquipmentManager.js';
-import { getAllRaces, WEAPON_ANIMATION_PACKS } from './modules/FactionRegistry.js';
+import { getAllRaces, WEAPON_ANIMATION_PACKS, loadManifest, getAnimationPacks } from './modules/FactionRegistry.js';
 import {
   ATTRIBUTES, ATTR_KEYS, MAX_POINTS,
   calculateDerivedStats, simulateCombat, createDefaultCharacter
 } from './modules/StatsEngine.js';
-import { apiClient } from './modules/ApiClient.js';
+import { grudgeAuth } from './modules/GrudgeAuth.js';
 import { characterStore } from './modules/CharacterStore.js';
 import {
   CLASSES, CLASS_SKILLS, PROFESSIONS, WORGE_FORMS, MAGIC_VFX,
@@ -23,6 +23,7 @@ import { assetCache } from './modules/AssetCache.js';
 import { PostFX } from './modules/PostFX.js';
 import { BoneAttachment } from './modules/BoneAttachment.js';
 import { BossFight } from './modules/BossFight.js';
+import { VFXManager } from './modules/VFXManager.js';
 
 // ════════════════════════════════════════════════════════════
 // State
@@ -44,6 +45,7 @@ let currentRaceId = null;
 
 // Weapon animation controller
 let weaponCtrl = null;
+let vfxMgr = null;
 
 // Post-processing, bone attachment, boss fight
 let postfx = null;
@@ -177,8 +179,12 @@ async function loadCharacterModel(raceConfig) {
     equipMgr = new EquipmentManager(raceConfig.prefix);
     const slots = equipMgr.catalog(model);
 
+    // VFX Manager — per-model because bones change with the loaded model
+    vfxMgr = new VFXManager(scene, equipMgr.bones);
+
     // Weapon Animation Controller — binds weapon equips to animation packs
-    weaponCtrl = new WeaponAnimController(mixer, fbxLoader, updateStatus);
+    weaponCtrl = new WeaponAnimController(mixer, fbxLoader, updateStatus, vfxMgr);
+    weaponCtrl.setModel(model);
     weaponCtrl.onChange(() => buildHotbarUI());
 
     updateStatus(`Loaded ${raceConfig.name}: ${equipMgr.meshCount} equipment meshes found`);
@@ -190,6 +196,8 @@ async function loadCharacterModel(raceConfig) {
     loadingText.textContent = `Error: ${err.message}`;
     updateStatus(`Failed to load model: ${err.message}`);
     console.error(err);
+    // Hide overlay after 3s so user can retry
+    setTimeout(() => overlay.classList.add('hidden'), 3000);
   }
 }
 
@@ -558,6 +566,9 @@ function animate() {
   controls.update();
   if (mixer) mixer.update(dt);
 
+  // VFX update — ticks particle lifetimes and normalized-time watchers
+  if (vfxMgr) vfxMgr.update(dt);
+
   // Boss fight update
   if (bossFight && bossFight.isActive) {
     bossFight.update(dt, currentModel);
@@ -879,13 +890,14 @@ function setupPersistence() {
 
 async function initPersistence() {
   const signInBtn = document.getElementById('signInBtn');
+  const discordBtn = document.getElementById('discordSignInBtn');
   const userDisplay = document.getElementById('userDisplay');
 
-  async function onSignedIn() {
+  async function onSignedIn(user) {
     try {
-      const user = await apiClient.ensureAuth();
       userDisplay.textContent = user.displayName || user.grudgeId || '';
       signInBtn.style.display = 'none';
+      if (discordBtn) discordBtn.style.display = 'none';
       await characterStore.load();
       buildSavedCharactersList();
       updateStatus('Signed in as ' + (user.displayName || user.grudgeId));
@@ -897,30 +909,39 @@ async function initPersistence() {
 
   function showOffline() {
     signInBtn.style.display = '';
+    if (discordBtn) discordBtn.style.display = '';
     document.getElementById('savedCharactersList').innerHTML =
       '<p style="color:var(--muted);font-size:.8rem;">Sign in to save characters</p>';
   }
 
-  // Manual sign-in button
+  // Guest sign-in button
   signInBtn.addEventListener('click', async () => {
     try {
-      await window.puter.auth.signIn();
-      await onSignedIn();
+      const user = await grudgeAuth.loginAsGuest();
+      await onSignedIn(user);
     } catch (err) {
       console.error('Sign-in failed:', err);
-      updateStatus('Sign-in cancelled');
+      updateStatus('Sign-in failed: ' + err.message);
     }
   });
 
-  // Check if already signed in (silent — no popup)
-  try {
-    if (window.puter && window.puter.auth.isSignedIn()) {
-      await onSignedIn();
-    } else {
-      showOffline();
-    }
-  } catch (err) {
-    console.error('Persistence init failed:', err);
+  // Discord sign-in button
+  if (discordBtn) {
+    discordBtn.addEventListener('click', () => grudgeAuth.loginWithDiscord());
+  }
+
+  // Handle OAuth callback (token in URL from Discord/Google redirect)
+  const callbackUser = await grudgeAuth.handleOAuthCallback();
+  if (callbackUser) {
+    await onSignedIn(callbackUser);
+    return;
+  }
+
+  // Try to restore existing session
+  const existingUser = await grudgeAuth.init();
+  if (existingUser) {
+    await onSignedIn(existingUser);
+  } else {
     showOffline();
   }
 }
@@ -928,22 +949,30 @@ async function initPersistence() {
 // ════════════════════════════════════════════════════════════
 // Boot
 // ════════════════════════════════════════════════════════════
-initScene();
-buildRaceSelector();
-buildAnimationUI();
-buildStatsPanel();
-setupCombatTest();
-setupAdminPanel();
-setupTabs();
-buildClassSelector();
-buildWeaponTypeGrid();
-buildProfessionsPanel();
-buildMasteryPanel();
-setupCombatHotkeys();
-setupPersistence();
-animate();
-updateStatus('Ready — select a faction race to load');
-initPersistence();
+// Boot sequence — load D1 manifest first, then build UI
+async function boot() {
+  initScene();
+
+  // Fetch D1 manifest (overwrites bundled data if available)
+  await loadManifest();
+
+  buildRaceSelector();
+  buildAnimationUI();
+  buildStatsPanel();
+  setupCombatTest();
+  setupAdminPanel();
+  setupTabs();
+  buildClassSelector();
+  buildWeaponTypeGrid();
+  buildProfessionsPanel();
+  buildMasteryPanel();
+  setupCombatHotkeys();
+  setupPersistence();
+  animate();
+  updateStatus('Ready — select a faction race to load');
+  initPersistence();
+}
+boot();
 
 // ════════════════════════════════════════════════════════════
 // Combat Hotkeys & Hotbar

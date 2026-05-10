@@ -7,7 +7,7 @@
  *   'error'   — API error occurred
  */
 
-import { apiClient } from './ApiClient.js';
+import { grudgeAuth } from './GrudgeAuth.js';
 
 const ACTIVE_KEY = 'grudge_active_character';
 
@@ -26,7 +26,7 @@ class CharacterStore extends EventTarget {
   /** Load characters from API. */
   async load() {
     try {
-      this.characters = await apiClient.listCharacters();
+      this.characters = await grudgeAuth.listCharacters();
       this._loaded = true;
       this._emit('change');
 
@@ -45,7 +45,7 @@ class CharacterStore extends EventTarget {
   /** Save a new character build. */
   async save(data) {
     try {
-      const char = await apiClient.createCharacter(data);
+      const char = await grudgeAuth.createCharacter(data);
       this.characters.push(char);
       this.activeId = char.id;
       localStorage.setItem(ACTIVE_KEY, char.id);
@@ -63,7 +63,7 @@ class CharacterStore extends EventTarget {
   async update(updates) {
     if (!this.activeId) return;
     try {
-      const updated = await apiClient.updateCharacter(this.activeId, updates);
+      const updated = await grudgeAuth.updateCharacter(this.activeId, updates);
       const idx = this.characters.findIndex(c => c.id === this.activeId);
       if (idx !== -1) this.characters[idx] = updated;
       this._emit('change');
@@ -78,7 +78,7 @@ class CharacterStore extends EventTarget {
   /** Delete a character by id. */
   async remove(id) {
     try {
-      await apiClient.deleteCharacter(id);
+      await grudgeAuth.deleteCharacter(id);
       this.characters = this.characters.filter(c => c.id !== id);
       if (this.activeId === id) {
         this.activeId = this.characters[0]?.id || null;

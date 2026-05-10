@@ -16,8 +16,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { GammaCorrectionShader } from 'three/addons/shaders/GammaCorrectionShader.js';
 
 // ── Custom Damage Flash Shader ──────────────────────────────
 const DamageFlashShader = {
@@ -99,9 +99,9 @@ export class PostFX {
     this.damagePass.uniforms.intensity.value = 0;
     this.composer.addPass(this.damagePass);
 
-    // 5. Gamma correction
-    this.gammaPass = new ShaderPass(GammaCorrectionShader);
-    this.composer.addPass(this.gammaPass);
+    // 5. Output pass (tone mapping + color space conversion)
+    this.outputPass = new OutputPass();
+    this.composer.addPass(this.outputPass);
 
     // 6. FXAA (always last)
     this.fxaaPass = new ShaderPass(FXAAShader);

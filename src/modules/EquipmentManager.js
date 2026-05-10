@@ -122,19 +122,69 @@ export class EquipmentManager {
 
   /**
    * Equip a specific variant of a slot (hides others in same slot).
-   * @param {string} slot     e.g. 'body', 'sword', 'shield'
-   * @param {string} variant  e.g. 'A', 'B', '_default'
+   * Optionally apply a material override and/or color tints (mirrors Unity SwitchableColor).
+   *
+   * @param {string} slot         e.g. 'body', 'sword', 'shield'
+   * @param {string} variant      e.g. 'A', 'B', '_default'
+   * @param {THREE.Material|null} [material]  override material (null = keep default)
+   * @param {Array<{property: string, color: number|string}>} [colors]  tint overrides
+   *   property: '_Color' | '_EmissionColor' | any THREE.MeshStandardMaterial prop
+   *   color: hex number e.g. 0xff4400 or css string e.g. '#ff4400'
    */
-  equip(slot, variant) {
+  equip(slot, variant, material = null, colors = null) {
     const variants = this.slots[slot];
     if (!variants) return false;
 
-    // Hide all variants in this slot
     for (const [v, mesh] of Object.entries(variants)) {
-      mesh.visible = (v === variant);
+      if (v === variant) {
+        mesh.visible = true;
+        // Material override
+        if (material) {
+          mesh.material = material;
+        } else if (mesh.userData._defaultMaterial) {
+          // Restore default if previously overridden
+          mesh.material = mesh.userData._defaultMaterial;
+        }
+        // Cache default material once
+        if (!mesh.userData._defaultMaterial && mesh.material) {
+          mesh.userData._defaultMaterial = mesh.material;
+        }
+        // Color tints (SwitchableColor equivalent)
+        if (colors?.length && mesh.material) {
+          this._applyColors(mesh, colors);
+        }
+      } else {
+        mesh.visible = false;
+      }
     }
     this.equipped[slot] = variant;
     return true;
+  }
+
+  /**
+   * Apply color tints to a mesh material.
+   * Mirrors Unity MeshSwitcher SwitchableColor system.
+   * @param {THREE.Mesh} mesh
+   * @param {Array<{property: string, color: number|string}>} colors
+   */
+  _applyColors(mesh, colors) {
+    const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    if (!mat) return;
+    for (const { property, color } of colors) {
+      switch (property) {
+        case '_Color':
+          if (mat.color) mat.color.set(color);
+          break;
+        case '_EmissionColor':
+          if (mat.emissive) { mat.emissive.set(color); mat.emissiveIntensity = 1; }
+          break;
+        default:
+          // Generic: try setting as THREE.Color property
+          if (mat[property]?.isColor) mat[property].set(color);
+          break;
+      }
+      mat.needsUpdate = true;
+    }
   }
 
   /**

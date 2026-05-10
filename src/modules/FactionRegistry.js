@@ -2,17 +2,19 @@
  * FactionRegistry — Faction/race/character model map.
  *
  * Supports both FBX (legacy baked equipment) and GLTF (newer rigged models).
- * SmartLoader auto-detects format. GLTF models are in ADDITIONAL_MODELS/.
+ * SmartLoader auto-detects format.
  *
- * Path base:  D:\Games\Models\grudgeracecharacters\factioncharacters\
+ * In production: fetches manifest from D1 Worker (models.grudge-studio.com/api/manifest)
+ * In dev/offline: falls back to the bundled static data below.
+ *
+ * Path base (local dev): D:\Games\Models\grudgeracecharacters\factioncharacters\
+ * Path base (production): https://assets.grudge-studio.com/models/characters/
  */
 
-// In production, set VITE_ASSET_BASE_URL to your object storage origin
-// e.g. https://objects.grudge-studio.com/race-characters
-// In local dev, Vite resolves /assets/ to the parent directory.
-const ASSET_URL = import.meta.env.VITE_ASSET_BASE_URL || '/assets';
-const BASE = `${ASSET_URL}/factioncharacters`;
-const ANIM_BASE = `${ASSET_URL}/animationsweapons`;
+import { ASSET_BASE, isProduction, MANIFEST_API } from './AssetConfig.js';
+
+const BASE = `${ASSET_BASE}/factioncharacters`;
+const ANIM_BASE = `${ASSET_BASE}/animationsweapons`;
 
 // Bone containers (identical across all 6 races)
 export const BONE_CONTAINERS = {
@@ -64,6 +66,18 @@ export const FACTIONS = {
     name: 'Crusade',
     color: '#c9a04e',
     races: {
+      human: {
+        name: 'Human (WK)',
+        prefix: 'WK_',
+        // Real path: F:\Documents\Toon_RTS\Toon_RTS\WesternKingdoms\models\
+        model: `${BASE}/WesternKingdoms/models/WK_Characters_customizable.FBX`,
+      },
+      barbarian: {
+        name: 'Barbarian (BRB)',
+        prefix: 'BRB_',
+        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Barbarians\models\
+        model: `${BASE}/Barbarians/models/BRB_Characters_customizable.FBX`,
+      },
       knight: {
         name: 'Eternal Knight',
         prefix: '',
@@ -86,6 +100,18 @@ export const FACTIONS = {
     name: 'Fabled',
     color: '#7ec8e3',
     races: {
+      elf: {
+        name: 'Elf (ELF)',
+        prefix: 'ELF_',
+        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Elves\models\
+        model: `${BASE}/Elves/models/ELF_Characters_customizable.FBX`,
+      },
+      dwarf: {
+        name: 'Dwarf (DWF)',
+        prefix: 'DWF_',
+        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Dwarves\models\
+        model: `${BASE}/Dwarves/models/DWF_Characters_customizable.FBX`,
+      },
       goblin: {
         name: 'Goblin',
         prefix: '',
@@ -98,6 +124,18 @@ export const FACTIONS = {
     name: 'Legion',
     color: '#8b2020',
     races: {
+      orc_classic: {
+        name: 'Orc (ORC)',
+        prefix: 'ORC_',
+        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Orcs\models\
+        model: `${BASE}/Orcs/models/ORC_Characters_Customizable.FBX`,
+      },
+      undead: {
+        name: 'Undead (UD)',
+        prefix: 'UD_',
+        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Undead\models\
+        model: `${BASE}/Undead/models/UD_Characters_customizable.FBX`,
+      },
       orc: {
         name: 'Orc',
         prefix: '',
@@ -438,7 +476,7 @@ export const WEAPON_MODEL_PACKS = {
 /** Flatten all races into a simple lookup array */
 export function getAllRaces() {
   const races = [];
-  for (const [factionId, faction] of Object.entries(FACTIONS)) {
+  for (const [factionId, faction] of Object.entries(_activeFactions)) {
     for (const [raceId, race] of Object.entries(faction.races)) {
       races.push({ factionId, factionName: faction.name, factionColor: faction.color, raceId, ...race });
     }
@@ -448,5 +486,63 @@ export function getAllRaces() {
 
 /** Get a specific race config */
 export function getRace(factionId, raceId) {
-  return FACTIONS[factionId]?.races?.[raceId] ?? null;
+  return _activeFactions[factionId]?.races?.[raceId] ?? null;
+}
+
+// ── D1 Manifest Fetching ────────────────────────────────────
+
+/** Active factions data (starts as bundled, overwritten by D1 manifest) */
+let _activeFactions = FACTIONS;
+let _activeAnimPacks = WEAPON_ANIMATION_PACKS;
+let _activeWeaponPacks = WEAPON_MODEL_PACKS;
+let _manifestLoaded = false;
+
+/**
+ * Fetch the model manifest from the D1 Worker API.
+ * Overwrites the bundled FACTIONS and animation packs with live data.
+ * Falls back to bundled data silently on failure.
+ *
+ * Call this once at app startup before building the race selector.
+ * @returns {Promise<boolean>} true if manifest was loaded from D1
+ */
+export async function loadManifest() {
+  if (!MANIFEST_API || _manifestLoaded) return _manifestLoaded;
+
+  try {
+    const resp = await fetch(`${MANIFEST_API}/api/manifest`);
+    if (!resp.ok) throw new Error(`Manifest API ${resp.status}`);
+    const data = await resp.json();
+
+    if (data.factions && Object.keys(data.factions).length > 0) {
+      _activeFactions = data.factions;
+    }
+    if (data.animationPacks) {
+      _activeAnimPacks = data.animationPacks;
+    }
+    if (data.weaponModelPacks) {
+      _activeWeaponPacks = data.weaponModelPacks;
+    }
+
+    _manifestLoaded = true;
+    console.log('[FactionRegistry] Loaded manifest from D1 —', Object.keys(data.factions || {}).length, 'factions');
+    return true;
+  } catch (err) {
+    console.warn('[FactionRegistry] D1 manifest unavailable, using bundled data:', err.message);
+    return false;
+  }
+}
+
+/** Get active animation packs (may be from D1 or bundled) */
+export function getAnimationPacks() {
+  return _activeAnimPacks;
+}
+
+/** Get active weapon model packs */
+export function getWeaponModelPacks() {
+  return _activeWeaponPacks;
+}
+
+/** Whether the manifest was loaded from D1 */
+export function isManifestLoaded() {
+  return _manifestLoaded;
 }

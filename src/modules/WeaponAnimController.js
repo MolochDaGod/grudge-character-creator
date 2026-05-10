@@ -4,6 +4,7 @@
  *
  * States: idle → draw → equipped → attack/block/dodge → sheath → idle
  */
+import * as THREE from 'three';
 
 import { WEAPON_ANIM_MAP, COMBAT_ACTIONS } from './GameData.js';
 
@@ -12,11 +13,16 @@ export class WeaponAnimController {
    * @param {THREE.AnimationMixer} mixer
    * @param {FBXLoader} fbxLoader
    * @param {(msg: string) => void} statusFn
+   * @param {import('./VFXManager.js').VFXManager} [vfxManager]  optional — wire up after init
    */
-  constructor(mixer, fbxLoader, statusFn) {
+  constructor(mixer, fbxLoader, statusFn, vfxManager = null) {
     this.mixer = mixer;
     this.loader = fbxLoader;
     this.status = statusFn || (() => {});
+    /** VFXManager — set via setVFX() or constructor */
+    this.vfx = vfxManager;
+    /** Character root position (THREE.Vector3) — set via setPosition() */
+    this._characterPosition = null;
 
     /** Currently equipped weapon type key (e.g. 'sword', 'bow') */
     this.equippedWeaponType = null;
@@ -34,6 +40,22 @@ export class WeaponAnimController {
 
     /** Callbacks on state change */
     this._changeCallbacks = [];
+  }
+
+  /**
+   * Attach a VFXManager after construction.
+   * @param {import('./VFXManager.js').VFXManager} vfxManager
+   */
+  setVFX(vfxManager) {
+    this.vfx = vfxManager;
+  }
+
+  /**
+   * Set the character's world position reference for VFX origin.
+   * @param {THREE.Object3D} model
+   */
+  setModel(model) {
+    this._model = model;
   }
 
   /**
@@ -122,6 +144,13 @@ export class WeaponAnimController {
 
     this._loadAndPlayFromPack(action.file);
     this.status(`${action.name}`);
+
+    // Fire VFX for this action using the Controller.controller action name
+    if (this.vfx && action.vfxKey && this.currentAction) {
+      const pos = this._getCharacterPosition();
+      this.vfx.playForAction(action.vfxKey, this.mixer, this.currentAction, pos);
+    }
+
     this._notify();
   }
 
@@ -210,5 +239,23 @@ export class WeaponAnimController {
       this.currentAction.crossFadeTo(next, fadeDuration, false);
     }
     this.currentAction = next;
+
+    // Fire VFX by matching the filename to a known action key in VFX_REGISTRY
+    if (this.vfx) {
+      // Strip path and extension to get a clean key, then try registry lookup
+      const key = name.replace(/\.fbx$/i, '').split('/').pop();
+      const pos = this._getCharacterPosition();
+      this.vfx.playForAction(key, this.mixer, next, pos);
+    }
+  }
+
+  /** @private — get character world position for VFX origin */
+  _getCharacterPosition() {
+    if (this._model) {
+      const v = new THREE.Vector3();
+      this._model.getWorldPosition?.(v);
+      return v;
+    }
+    return new THREE.Vector3();
   }
 }
