@@ -8,5 +8,7 @@ workers_dev = false
 
 routes = [
   { pattern = "characters.grudge-studio.com/*", zone_name = "grudge-studio.com" },
-  { pattern = "grudachain.grudge-studio.com/*", zone_name = "grudge-studio.com" }
+  { pattern = "grudachain.grudge-studio.com/*", zone_name = "grudge-studio.com" },
+  { pattern = "auth.grudge-studio.com/*", zone_name = "grudge-studio.com" },
+  { pattern = "objectstore.grudge-studio.com/*", zone_name = "grudge-studio.com" }
 ]

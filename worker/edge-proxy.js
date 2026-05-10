@@ -11,9 +11,22 @@
  *   - Can add headers, auth, rate limiting at the edge
  */
 
-const ROUTES = {
-  'characters.grudge-studio.com': 'https://playground-teal-zeta.vercel.app',
-  'grudachain.grudge-studio.com': 'https://grudachain.grudgestudio.com',
+/**
+ * Proxy routes — hostname → Vercel/Pages backend URL
+ * Traffic hits Cloudflare edge, gets proxied to the real origin.
+ */
+const PROXY_ROUTES = {
+  'characters.grudge-studio.com':  'https://playground-teal-zeta.vercel.app',
+  'grudachain.grudge-studio.com':  'https://grudachain.grudgestudio.com',
+  'objectstore.grudge-studio.com': 'https://grudge-objectstore.pages.dev',
+};
+
+/**
+ * Redirect routes — hostname → redirect target URL
+ * Permanent redirects (301) so browsers cache them.
+ */
+const REDIRECT_ROUTES = {
+  'auth.grudge-studio.com': 'https://id.grudge-studio.com',
 };
 
 export default {
@@ -21,12 +34,29 @@ export default {
     const url = new URL(request.url);
     const host = url.hostname;
 
-    const target = ROUTES[host];
-    if (!target) {
-      return new Response('Not found', { status: 404 });
+    // ── Redirects ──
+    const redirectTarget = REDIRECT_ROUTES[host];
+    if (redirectTarget) {
+      const dest = new URL(url.pathname + url.search, redirectTarget);
+      return new Response(null, {
+        status: 301,
+        headers: {
+          'Location': dest.toString(),
+          'X-Proxied-By': 'grudge-edge-proxy',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      });
     }
 
-    // Rewrite the request to the Vercel backend
+    // ── Proxy ──
+    const target = PROXY_ROUTES[host];
+    if (!target) {
+      return new Response(JSON.stringify({ error: 'Unknown host', host }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const targetUrl = new URL(url.pathname + url.search, target);
 
     const proxyReq = new Request(targetUrl.toString(), {
@@ -36,14 +66,13 @@ export default {
       redirect: 'manual',
     });
 
-    // Set the Host header to what Vercel expects
+    // Set Host to what the origin expects
     proxyReq.headers.set('Host', new URL(target).hostname);
     proxyReq.headers.set('X-Forwarded-Host', host);
     proxyReq.headers.set('X-Forwarded-Proto', 'https');
 
     const resp = await fetch(proxyReq);
 
-    // Clone response with CORS and security headers
     const headers = new Headers(resp.headers);
     headers.set('X-Proxied-By', 'grudge-edge-proxy');
     headers.set('X-Frame-Options', 'DENY');
