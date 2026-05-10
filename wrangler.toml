@@ -12,7 +12,7 @@ compatibility_date = "2024-12-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "grudge-models"
-database_id = ""  # Fill after: npx wrangler d1 create grudge-models
+database_id = "2f836a43-153d-4502-8ff0-75a01c15ecb9"
 
 # R2 bucket binding (optional — for direct upload from Worker)
 # [[r2_buckets]]
