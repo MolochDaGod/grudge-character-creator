@@ -15,7 +15,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
-    #app { display: grid; grid-template-columns: 280px 1fr 320px; grid-template-rows: 50px 1fr 220px; height: 100vh; }
+    #app { display: grid; grid-template-columns: 260px 1fr 300px; grid-template-rows: 50px 1fr; height: 100vh; }
 
     /* Header */
     header { grid-column: 1/-1; background: linear-gradient(135deg, rgba(14,22,48,.9), rgba(20,26,43,.7));
@@ -32,7 +32,7 @@
       border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 10px; }
 
     /* Left Panel — Character Select + Equipment */
-    #leftPanel { grid-row: 2/4; }
+    #leftPanel { grid-row: 2/3; }
     .faction-btn { width: 100%; padding: 8px 12px; margin-bottom: 4px; border: 1px solid var(--border);
       border-radius: 6px; background: rgba(0,0,0,.2); color: var(--text); cursor: pointer;
       font-size: .85rem; text-align: left; transition: all .2s; display: flex; align-items: center; gap: 8px; }
@@ -61,7 +61,7 @@
     #loadingOverlay p { color: var(--muted); margin-top: 12px; font-size: .85rem; }
 
     /* Right Panel — Stats + Combat */
-    #rightPanel { grid-row: 2/4; }
+    #rightPanel { grid-row: 2/3; }
     .attr-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
     .attr-row label { font-size: .75rem; min-width: 30px; font-weight: 600; }
     .attr-row input[type=range] { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 2px; }
@@ -70,16 +70,25 @@
     .attr-row .val { font-size: .75rem; font-family: monospace; min-width: 24px; text-align: right; color: var(--accent); }
     .points-bar { text-align: center; padding: 6px; background: rgba(0,0,0,.3); border-radius: 6px;
       font-size: .8rem; margin-bottom: 10px; font-family: monospace; }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-    .stat-item { display: flex; justify-content: space-between; padding: 3px 6px;
-      background: rgba(0,0,0,.2); border-radius: 4px; font-size: .7rem; }
-    .stat-item .label { color: var(--muted); }
-    .stat-item .value { color: var(--accent); font-family: monospace; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+    .stat-item { display: flex; justify-content: space-between; padding: 4px 8px;
+      background: rgba(0,0,0,.25); border-radius: 4px; font-size: .72rem; border-left: 2px solid transparent; }
+    .stat-item .label { color: var(--muted); white-space: nowrap; }
+    .stat-item .value { color: var(--accent); font-family: monospace; font-weight: 600; min-width: 40px; text-align: right; }
+    .stat-item:hover { border-left-color: var(--accent); background: rgba(110,231,183,.05); }
+    .stat-item--offense { border-left-color: #ef444440; }
+    .stat-item--defense { border-left-color: #3b82f640; }
+    .stat-item--regen { border-left-color: #22c55e40; }
+    .stat-item--utility { border-left-color: #f9731640; }
 
-    /* Bottom Panel — Hotbar + Animation + Admin */
-    #bottomPanel { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; }
-    #animPanel, #adminPanel { padding: 12px; background: linear-gradient(135deg, rgba(20,26,43,.95), rgba(20,26,43,.75));
-      border-top: 1px solid var(--border); overflow-y: auto; }
+    /* Bottom Panel — collapsed into a toolbar at bottom of viewport */
+    #bottomPanel { grid-column: 2; grid-row: 2/3; align-self: end; z-index: 5;
+      display: flex; gap: 1px; max-height: 180px; overflow: hidden;
+      background: linear-gradient(0deg, rgba(11,16,32,.95) 60%, transparent); pointer-events: none; }
+    #bottomPanel > * { pointer-events: auto; flex: 1; padding: 8px; overflow-y: auto;
+      background: rgba(20,26,43,.9); border-top: 1px solid var(--border); max-height: 180px; }
+    #bottomPanel h3 { font-size: .75rem; margin-bottom: 6px; }
+    #animPanel, #adminPanel { padding: 8px; }
     select, button.action-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
       background: rgba(0,0,0,.3); color: var(--text); font-size: .8rem; cursor: pointer; }
     select { width: 100%; margin-bottom: 6px; }

@@ -423,19 +423,38 @@ function recalcStats() {
   character.stats = calculateDerivedStats(character.attrs, character.level);
 
   const statsEl = document.getElementById('derivedStats');
-  const statLabels = {
-    meleeAttack: 'Melee ATK', rangedAttack: 'Ranged ATK', spellPower: 'Spell Power',
-    attackSpeed: 'ATK Speed', critChance: 'Crit %', critDamage: 'Crit DMG %',
-    maxHP: 'Max HP', maxMana: 'Max Mana', maxStamina: 'Max Stam',
-    defense: 'Defense', magicResist: 'Magic Res', blockChance: 'Block %',
-    blockFactor: 'Block Factor', dodgeChance: 'Dodge %',
-    hpRegen: 'HP/s', manaRegen: 'Mana/s', staminaRegen: 'Stam/s',
-    moveSpeed: 'Move Spd', combatPower: 'Combat Pwr',
-  };
+  const statSections = [
+    { title: '⚔️ Offense', css: 'offense', stats: {
+      meleeAttack: 'Melee ATK', rangedAttack: 'Ranged ATK', spellPower: 'Spell Power',
+      attackSpeed: 'ATK Speed', critChance: 'Crit %', critDamage: 'Crit DMG %',
+      defenseBreak: 'Def Break', armorPenetration: 'Armor Pen', accuracy: 'Accuracy',
+    }},
+    { title: '🛡️ Defense', css: 'defense', stats: {
+      maxHP: 'Max HP', maxMana: 'Max Mana', maxStamina: 'Max Stamina',
+      defense: 'Defense', magicResist: 'Magic Res', blockChance: 'Block %',
+      blockFactor: 'Block Factor', dodgeChance: 'Dodge %', critEvasion: 'Crit Evasion',
+      ccResistance: 'CC Resist', absorbFactor: 'Absorb %',
+    }},
+    { title: '💚 Regen', css: 'regen', stats: {
+      hpRegen: 'HP / sec', manaRegen: 'Mana / sec', staminaRegen: 'Stam / sec',
+    }},
+    { title: '⚡ Utility', css: 'utility', stats: {
+      moveSpeed: 'Move Speed', cooldownReduction: 'CDR %', abilityCostRed: 'Cost Reduce %',
+      comboCooldownRed: 'Combo CDR %', carryWeight: 'Carry Weight',
+      miningBonus: 'Mining +', craftingBonus: 'Crafting +', harvestBonus: 'Harvest +',
+    }},
+    { title: '💀 Summary', css: 'offense', stats: {
+      combatPower: 'Combat Power',
+    }},
+  ];
 
-  statsEl.innerHTML = Object.entries(statLabels).map(([key, label]) => {
-    const val = character.stats[key] ?? 0;
-    return `<div class="stat-item"><span class="label">${label}</span><span class="value">${typeof val === 'number' ? (Number.isInteger(val) ? val : val.toFixed(1)) : val}</span></div>`;
+  const fmt = (v) => typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(1)) : v;
+  statsEl.innerHTML = statSections.map(sec => {
+    const rows = Object.entries(sec.stats).map(([key, label]) => {
+      const val = character.stats[key] ?? 0;
+      return `<div class="stat-item stat-item--${sec.css}"><span class="label">${label}</span><span class="value">${fmt(val)}</span></div>`;
+    }).join('');
+    return `<div style="grid-column:1/-1;font-size:.65rem;color:var(--muted);padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">${sec.title}</div>${rows}`;
   }).join('');
 }
 
