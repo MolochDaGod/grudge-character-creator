@@ -2,25 +2,25 @@
  * StatsEngine — Grudge Warlords stat system.
  *
  * Implements:
- * - 8 core attributes (STR, DEX, INT, VIT, WIS, LCK, CHA, END)
+ * - 8 core attributes (STR, VIT, END, INT, WIS, DEX, AGI, TAC)
  * - Diminishing returns (full 1-25, half 26-50, quarter 51+)
  * - 37 derived stats
  * - 8-step combat pipeline
  * - T1-T8 gear tier system
  *
- * Source: https://info.grudge-studio.com/stats-guide.html
+ * Source: GrudgeBuilder/shared/attributeSystem.ts + shared/statCalculator.ts
  */
 
-// ── Attribute definitions ──────────────────────────────────
+// ── Attribute definitions (canonical: STR/VIT/END/INT/WIS/DEX/AGI/TAC) ──
 export const ATTRIBUTES = {
-  STR: { name: 'Strength',     color: '#ef4444', icon: '⚔️',  desc: 'Physical power. Melee damage, carry weight, block factor.' },
-  DEX: { name: 'Dexterity',    color: '#f97316', icon: '🏹',  desc: 'Agility and precision. Crit chance, attack speed, dodge.' },
-  INT: { name: 'Intelligence', color: '#8b5cf6', icon: '🔮',  desc: 'Arcane mastery. Spell damage, mana pool, mana regen.' },
-  VIT: { name: 'Vitality',     color: '#22c55e', icon: '❤️',  desc: 'Toughness. Max HP, HP regen, damage reduction.' },
-  WIS: { name: 'Wisdom',       color: '#3b82f6', icon: '📖',  desc: 'Insight. Mana regen, cooldown reduction, XP gain.' },
-  LCK: { name: 'Luck',         color: '#eab308', icon: '🍀',  desc: 'Fortune. Crit damage, loot quality, dodge chance.' },
-  CHA: { name: 'Charisma',     color: '#ec4899', icon: '👑',  desc: 'Influence. Vendor prices, companion strength, faction rep.' },
-  END: { name: 'Endurance',    color: '#14b8a6', icon: '🛡️',  desc: 'Stamina. Max stamina, stamina regen, sprint duration.' },
+  STR: { name: 'Strength',     color: '#ef4444', icon: '⚔️',  desc: 'Physical power. Melee damage, health, block factor, defense.' },
+  VIT: { name: 'Vitality',     color: '#22c55e', icon: '❤️',  desc: 'Toughness. Max HP, HP regen, damage reduction, defense.' },
+  END: { name: 'Endurance',    color: '#14b8a6', icon: '🛡️',  desc: 'Stamina and defense. Block chance, CC resist, armor.' },
+  INT: { name: 'Intellect',    color: '#8b5cf6', icon: '🔮',  desc: 'Arcane mastery. Spell damage, mana pool, cooldown reduction.' },
+  WIS: { name: 'Wisdom',       color: '#3b82f6', icon: '📖',  desc: 'Insight. Mana, resistance, spell accuracy, status effects.' },
+  DEX: { name: 'Dexterity',    color: '#f97316', icon: '🏹',  desc: 'Precision. Crit chance, accuracy, attack speed, evasion.' },
+  AGI: { name: 'Agility',      color: '#eab308', icon: '💨',  desc: 'Speed and reflexes. Move speed, evasion, dodge, crit evasion.' },
+  TAC: { name: 'Tactics',      color: '#ec4899', icon: '🎯',  desc: 'Strategy. Armor penetration, block break, combo cooldowns, ability cost.' },
 };
 
 export const ATTR_KEYS = Object.keys(ATTRIBUTES);
@@ -42,7 +42,7 @@ export function effectivePoints(raw) {
 // ── Derived stats calculator ───────────────────────────────
 /**
  * Calculate all 37 derived stats from 8 attribute values.
- * @param {Object} attrs  { STR: n, DEX: n, INT: n, VIT: n, WIS: n, LCK: n, CHA: n, END: n }
+ * @param {Object} attrs  { STR: n, VIT: n, END: n, INT: n, WIS: n, DEX: n, AGI: n, TAC: n }
  * @param {number} level  Character level (1-100)
  * @returns {Object} All derived stats
  */
@@ -54,48 +54,53 @@ export function calculateDerivedStats(attrs, level = 1) {
 
   const stats = {};
 
-  // ── Offensive ──
-  stats.meleeAttack      = Math.floor(level * 2 + e.STR * 3.5 + e.DEX * 1.2);
-  stats.rangedAttack     = Math.floor(level * 2 + e.DEX * 3.5 + e.LCK * 1.0);
-  stats.spellPower       = Math.floor(level * 2 + e.INT * 4.0 + e.WIS * 1.5);
-  stats.attackSpeed      = Math.min(2.5, 1.0 + e.DEX * 0.015 + e.END * 0.005);
-  stats.critChance       = Math.min(75, 5 + e.DEX * 0.5 + e.LCK * 0.8);
-  stats.critDamage       = 150 + e.LCK * 1.5 + e.STR * 0.5;
-  stats.defenseBreak     = e.STR * 0.3 + e.INT * 0.2;
+  // ── Offensive (canonical per-point gains from statCalculator.ts) ──
+  stats.meleeAttack      = Math.floor(level * 2 + e.STR * 3 + e.DEX * 3 + e.AGI * 3 + e.VIT * 2 + e.TAC * 3 +
+                           20 * (e.STR * 0.02 + e.DEX * 0.018 + e.AGI * 0.016 + e.VIT * 0.001 + e.TAC * 0.002));
+  stats.rangedAttack     = Math.floor(level * 2 + e.DEX * 4 + e.AGI * 2 + e.TAC * 1.5);
+  stats.spellPower       = Math.floor(level * 2 + e.INT * 4 + e.WIS * 2 + 20 * (e.INT * 0.025 + e.WIS * 0.015));
+  stats.attackSpeed      = Math.min(2.5, 1.0 + e.DEX * 0.015 + e.AGI * 0.005);
+  stats.critChance       = Math.min(75, 5 + e.DEX * 0.5 + e.AGI * 0.42 + e.STR * 0.32 + e.TAC * 0.02);
+  stats.critDamage       = 150 + e.STR * 1.1 + e.DEX * 0.2 + 150 * (e.STR * 0.015);
+  stats.defenseBreak     = e.TAC * 0.1 + e.STR * 0.3;
 
   // ── Defensive ──
-  stats.maxHP            = Math.floor(100 + level * 10 + e.VIT * 15 + e.END * 5);
-  stats.maxMana          = Math.floor(50 + level * 5 + e.INT * 10 + e.WIS * 8);
-  stats.maxStamina       = Math.floor(100 + e.END * 8 + e.VIT * 3);
-  stats.defense          = Math.floor(level + e.VIT * 3 + e.STR * 1 + e.END * 1.5);
-  stats.magicResist      = Math.floor(level + e.WIS * 3 + e.INT * 1 + e.VIT * 1);
-  stats.blockChance      = Math.min(75, e.STR * 0.4 + e.END * 0.3);
+  stats.maxHP            = Math.floor(100 + level * 10 + e.STR * 26 + e.VIT * 25 + e.END * 10 + e.WIS * 10 + e.AGI * 2 + e.TAC * 10);
+  stats.maxMana          = Math.floor(50 + level * 5 + e.INT * 5 + e.VIT * 2 + e.WIS * 20);
+  stats.maxStamina       = Math.floor(100 + e.VIT * 5 + e.END * 1 + e.AGI * 5 + e.TAC * 1);
+  stats.defense          = Math.floor(10 + level + e.STR * 12 + e.VIT * 12 + e.END * 12 + e.INT * 2 + e.WIS * 2 + e.DEX * 10 + e.AGI * 5 + e.TAC * 5);
+  stats.magicResist      = Math.floor(e.INT * 0.38 + e.VIT * 0.5 + e.END * 0.46 + e.WIS * 0.5 + 10 * (e.INT * 0.17));
+  stats.blockChance      = Math.min(75, e.STR * 0.5 + e.END * 0.11 + e.DEX * 0.41 + e.TAC * 0.27 +
+                           5 * (e.STR * 0.05 + e.END * 0.735 + e.DEX * 0.01 + e.TAC * 0.008));
   stats.blockFactor      = Math.min(80, 20 + e.STR * 0.5 + e.VIT * 0.3);
-  stats.dodgeChance      = Math.min(50, e.DEX * 0.5 + e.LCK * 0.3);
-  stats.critEvasion      = Math.min(50, e.LCK * 0.4 + e.WIS * 0.2);
+  stats.dodgeChance      = Math.min(50, e.DEX * 0.125 + e.AGI * 0.225);
+  stats.critEvasion      = Math.min(50, e.AGI * 0.25 + e.WIS * 0.2);
 
   // ── Regen ──
-  stats.hpRegen          = +(1 + e.VIT * 0.3 + e.END * 0.1).toFixed(1);
-  stats.manaRegen        = +(1 + e.WIS * 0.4 + e.INT * 0.15).toFixed(1);
+  stats.hpRegen          = +(1 + e.VIT * 0.06 + e.END * 0.02 + e.STR * 0.02).toFixed(1);
+  stats.manaRegen        = +(1 + e.WIS * 0.4 + e.INT * 0.04).toFixed(1);
   stats.staminaRegen     = +(5 + e.END * 0.5 + e.VIT * 0.1).toFixed(1);
 
   // ── Movement ──
-  stats.moveSpeed        = +(5 + e.DEX * 0.05 + e.END * 0.03).toFixed(2);
+  stats.moveSpeed        = +(5 + e.AGI * 0.15).toFixed(2);
   stats.sprintDuration   = +(3 + e.END * 0.1).toFixed(1);
 
   // ── Combat Modifiers ──
-  stats.drainHealth      = Math.min(50, e.LCK * 0.2 + e.VIT * 0.1);
+  stats.drainHealth      = Math.min(50, e.STR * 0.075 + e.VIT * 0.1);
   stats.reflectDamage    = Math.min(50, e.STR * 0.15 + e.VIT * 0.1);
   stats.absorbFactor     = Math.min(50, e.VIT * 0.2 + e.END * 0.1);
+  stats.armorPenetration = Math.min(75, e.TAC * 0.2);
+  stats.blockPenetration = Math.min(75, e.TAC * 0.175);
+
+  // ── Accuracy ──
+  stats.accuracy         = Math.min(100, e.INT * 0.12 + e.DEX * 0.7 + 50 * (e.INT * 0.338 + e.DEX * 0.015));
 
   // ── Utility ──
   stats.carryWeight      = Math.floor(50 + e.STR * 3 + e.END * 2);
-  stats.cooldownReduction= Math.min(40, e.WIS * 0.3 + e.INT * 0.1);
-  stats.xpBonus          = +(e.WIS * 0.2 + e.CHA * 0.1).toFixed(1);
-  stats.lootQuality      = +(e.LCK * 0.5 + e.CHA * 0.2).toFixed(1);
-  stats.vendorDiscount   = Math.min(30, e.CHA * 0.4);
-  stats.companionPower   = Math.floor(e.CHA * 2 + e.WIS * 0.5);
-  stats.factionRepBonus  = +(e.CHA * 0.3).toFixed(1);
+  stats.cooldownReduction= Math.min(40, e.INT * 0.075 + e.TAC * 0.05 + e.WIS * 0.3);
+  stats.ccResistance     = Math.min(75, e.END * 0.1);
+  stats.abilityCostRed   = Math.min(30, e.TAC * 0.075 + e.INT * 0.05);
+  stats.comboCooldownRed = Math.min(25, e.TAC * 0.125);
 
   // ── Profession Bonuses ──
   stats.miningBonus      = +(e.STR * 0.2 + e.END * 0.1).toFixed(1);
@@ -103,10 +108,10 @@ export function calculateDerivedStats(attrs, level = 1) {
   stats.harvestBonus     = +(e.END * 0.2 + e.VIT * 0.1).toFixed(1);
 
   // ── Summary ──
-  stats.combatPower      = Math.floor(
-    stats.meleeAttack * 0.3 + stats.rangedAttack * 0.3 + stats.spellPower * 0.2 +
-    stats.defense * 0.1 + stats.maxHP * 0.05 + stats.critChance * 2
-  );
+  const physDps = stats.meleeAttack * (1 + (stats.critChance / 100) * (stats.critDamage / 100)) * (1 + stats.attackSpeed / 100);
+  const ehp = stats.maxHP * (1 + stats.defense / 1000) * (1 + stats.magicResist / 100);
+  const utility = stats.moveSpeed * 2 + stats.dodgeChance * 3 + stats.blockChance * 2;
+  stats.combatPower = Math.floor(ehp * 0.4 + physDps * 2.5 + utility * 5);
 
   return stats;
 }
