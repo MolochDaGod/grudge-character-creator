@@ -180,6 +180,20 @@
     .wep-type-btn:hover { border-color: var(--accent); color: var(--text); }
     .wep-type-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); color: var(--accent); }
 
+    /* ── Forge tree styles ──────────────────────────────────────────────── */
+    .forge-node { display: flex; align-items: center; gap: 4px; padding: 2px 4px;
+      border-bottom: 1px solid rgba(42,49,80,.3); cursor: default; font-size: .65rem; }
+    .forge-node:hover { background: rgba(110,231,183,.05); }
+    .forge-node.forge-hidden { opacity: .4; }
+    .forge-toggle { cursor: pointer; font-size: .6rem; min-width: 12px; user-select: none; }
+    .forge-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+    .forge-badge { font-size: .5rem; padding: 1px 4px; border-radius: 3px; color: #000; font-weight: 600; }
+    .forge-geo { font-size: .55rem; color: var(--muted); }
+    .forge-mat { font-size: .55rem; color: #8b5cf6; }
+    .forge-vis, .forge-focus { background: none; border: none; cursor: pointer; font-size: .6rem;
+      padding: 1px 3px; border-radius: 2px; margin-left: auto; }
+    .forge-vis:hover, .forge-focus:hover { background: rgba(110,231,183,.15); }
+
     /* ── Mobile toggle button (hidden on desktop) ─────────────────────── */
     .mobile-toggle { display: none; }
 
@@ -385,6 +399,13 @@
           <span id="animSpeedVal">1.0x</span>
         </label>
       </div>
+    </div>
+    <div id="forgePanel" style="padding:8px;">
+      <h3>⚒️ Forge</h3>
+      <p style="font-size:.65rem;color:var(--muted);margin-bottom:4px;">Drop any model onto the 3D viewport, or use the button:</p>
+      <input type="file" id="forgeFileInput" accept=".fbx,.glb,.gltf,.obj,.dae,.stl,.usdz,.usdc" style="font-size:.7rem;color:var(--muted);margin-bottom:6px;width:100%;">
+      <div id="forgeTree" style="max-height:140px;overflow-y:auto;font-size:.65rem;font-family:monospace;"></div>
+      <button class="action-btn" id="forgeExport" style="width:100%;margin-top:4px;">📋 Export Hierarchy JSON</button>
     </div>
     <div id="adminPanel">
       <h3>Admin Panel</h3>
