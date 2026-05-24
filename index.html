@@ -179,6 +179,105 @@
       transition: all .15s; color: var(--muted); }
     .wep-type-btn:hover { border-color: var(--accent); color: var(--text); }
     .wep-type-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); color: var(--accent); }
+
+    /* ── Mobile toggle button (hidden on desktop) ─────────────────────── */
+    .mobile-toggle { display: none; }
+
+    /* ── Responsive: tablet (≤ 900px) — drop right panel below ──────── */
+    @media (max-width: 900px) {
+      #app {
+        grid-template-columns: 220px 1fr;
+        grid-template-rows: 50px 1fr auto;
+      }
+      #rightPanel {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        max-height: 40vh;
+        border-top: 2px solid var(--border);
+      }
+      #bottomPanel { grid-column: 2; }
+    }
+
+    /* ── Responsive: mobile (≤ 768px) — single column, panels toggle ── */
+    @media (max-width: 768px) {
+      body { overflow: auto; height: auto; }
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+      }
+      header {
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      header h1 { font-size: .95rem; }
+      header .status { width: 100%; margin-left: 0; font-size: .7rem; }
+
+      /* Toggle button visible on mobile */
+      .mobile-toggle {
+        display: inline-flex;
+        align-items: center; gap: 4px;
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: rgba(0,0,0,.3);
+        color: var(--accent);
+        cursor: pointer;
+        font-size: .8rem;
+        font-family: 'Jost', sans-serif;
+      }
+      .mobile-toggle:hover { border-color: var(--accent); }
+
+      /* Panels hidden by default on mobile, shown when toggled */
+      #leftPanel, #rightPanel {
+        display: none;
+        max-height: none;
+        border: none;
+        border-bottom: 1px solid var(--border);
+      }
+      #leftPanel.mobile-open, #rightPanel.mobile-open {
+        display: block;
+      }
+
+      /* Viewport fills available width, fixed aspect ratio */
+      #viewport {
+        width: 100%;
+        height: 0;
+        padding-bottom: 75%; /* 4:3 aspect */
+        position: relative;
+      }
+      #viewport canvas {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* Bottom panel stacks vertically */
+      #bottomPanel {
+        position: static;
+        flex-direction: column;
+        max-height: none;
+        background: var(--card);
+        pointer-events: auto;
+      }
+      #bottomPanel > * {
+        max-height: none;
+        border-top: 1px solid var(--border);
+      }
+
+      /* Stat grid single column on very narrow screens */
+      .stat-grid { grid-template-columns: 1fr; }
+      .wep-type-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ── Responsive: small phone (≤ 480px) ──────────────────────────── */
+    @media (max-width: 480px) {
+      header h1 { font-size: .8rem; }
+      .panel h3 { font-size: .8rem; }
+      .tab-btn { font-size: .6rem; padding: 4px 6px; }
+      .wep-type-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -186,6 +285,8 @@
   <header>
     <h1>GRUDGE CHARACTER CREATOR</h1>
     <span style="color:var(--muted);font-size:.75rem;">v2.0</span>
+    <button class="mobile-toggle" id="toggleLeftPanel">☰ Chars</button>
+    <button class="mobile-toggle" id="toggleRightPanel">📊 Stats</button>
     <button class="action-btn" id="saveBuildBtn" style="margin-left:12px;">💾 Save Build</button>
     <button class="action-btn" id="updateBuildBtn" style="display:none;">🔄 Update Build</button>
     <span class="status" id="statusBar">Select a race to begin</span>
@@ -303,6 +404,17 @@
   </div>
 </div>
 
+<script>
+  // Mobile panel toggles — only functional at ≤768px (buttons hidden on desktop via CSS)
+  document.getElementById('toggleLeftPanel').addEventListener('click', () => {
+    document.getElementById('leftPanel').classList.toggle('mobile-open');
+    document.getElementById('rightPanel').classList.remove('mobile-open');
+  });
+  document.getElementById('toggleRightPanel').addEventListener('click', () => {
+    document.getElementById('rightPanel').classList.toggle('mobile-open');
+    document.getElementById('leftPanel').classList.remove('mobile-open');
+  });
+</script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
