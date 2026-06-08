@@ -19,23 +19,36 @@ Modular 3D race character editor with equipment toggling, stat allocation, comba
 ## Architecture
 
 ```
-┌─────────────┐      ┌──────────────────────────────┐      ┌─────────────────┐
-│   Vercel    │─────▷│  Cloudflare Worker (D1 API)  │      │   Cloudflare R2  │
-│  (Frontend) │      │  grudge-models-worker         │      │  assets.grudge-  │
-│  Vite SPA   │      │  /api/manifest → D1 query    │      │  studio.com      │
-└──────┬──────┘      └──────────────────────────────┘      └────────┬────────┘
-       │                                                            │
-       │  Equipment state                              GLB models   │
-       │  (faction + race + slot + variant)             served via  │
-       │         │                                     CDN URL      │
-       │         ▼                                          │
-       │  EquipmentManager.js                               │
-       │  toggles child mesh visibility                     │
-       │  by name (e.g. WK_Units_Body_A)  ◁─────────────────┘
+┌─────────────┐      ┌────────────────────────────────────┐      ┌─────────────────┐
+│   Vercel    │─────▷│  Cloudflare Worker                 │      │   Cloudflare R2 │
+│  (Frontend) │      │  models.grudge-studio.com          │      │  assets.grudge- │
+│  Vite SPA   │      │  /api/manifest → D1 query          │      │  studio.com     │
+└──────┬──────┘      │  /api/events   → Pipelines stream  │      └────────┬────────┘
+       │             └─────────────┬──────────────────────┘               │
+       │                           │                                       │
+       │  Equipment state          ▼ env.GRUDGE_EVENTS_STREAM.send()       │
+       │                  ┌───────────────────────────┐                    │
+       │                  │  grudge_events pipeline   │                    │
+       │                  │   stream → SQL → sink     │                    │
+       │                  └─────────────┬─────────────┘                    │
+       │                                ▼                                  │
+       │                  ┌───────────────────────────┐    GLB models      │
+       │                  │  r2://grudge-events       │    served via      │
+       │                  │  parquet+zstd, partitioned│    CDN URL         │
+       │                  └───────────────────────────┘                    │
+       │         ▼                                                         │
+       │  EquipmentManager.js                                              │
+       │  toggles child mesh visibility                                    │
+       │  by name (e.g. WK_Units_Body_A)  ◁────────────────────────────────┘
        │
        └──────▷ api.grudge-studio.com
                 (Grudge backend — auth + character CRUD)
 ```
+
+Two services live behind a single Worker (`models.grudge-studio.com`):
+
+1. **Manifest API** — read-only D1 queries that tell the SPA which meshes exist for each race.
+2. **Events ingest** — batched POSTs from the SPA forwarded to the `grudge_events` Cloudflare Pipelines stream, which lands them in R2 as Parquet for downstream analytics.
 
 ## Quick Start (Local Dev)
 
@@ -75,8 +88,11 @@ playground/
 │       ├── PostFX.js           # Bloom, tone mapping post-processing
 │       ├── VFXManager.js       # Particle effects
 │       ├── BossFight.js        # Boss arena mode
-│       └── AssetCache.js       # Asset preloading
-├── wrangler.toml          # Cloudflare Worker + D1 config
+│       ├── AssetCache.js       # Asset preloading
+│       └── Telemetry.js        # Event batcher → /api/events → Pipelines → R2
+├── d1/pipelines/
+│   └── grudge-events.schema.json # Source-of-truth schema for the events stream
+├── wrangler.toml          # Cloudflare Worker + D1 + Pipelines config
 ├── vercel.json            # Vercel deployment config
 ├── vite.config.js         # Vite + local asset serving plugin
 ├── server.js              # Express server for local production testing
@@ -203,12 +219,105 @@ Character CRUD (create/read/update/delete) goes through the Grudge backend, not 
 | `npm run worker:dev` | Run Worker locally |
 | `npm run worker:deploy` | Deploy Worker to Cloudflare |
 
+## Controls & Hotkeys
+
+The viewport listens for `keydown` on `document.body` only — focus an input first and hotkeys are suppressed so you can type freely.
+
+| Key | Action | Module |
+|---|---|---|
+| `1`–`4` | Trigger hotbar slot 1–4 (weapon-specific action) | `WeaponAnimController.triggerAction('slotN')` |
+| `Q` (hold) | Block stance — releases on `keyup` | `triggerAction('block')` / `releaseBlock()` |
+| `E` | Dodge | `triggerAction('dodge')` |
+| `Z` | Battle Cry — alias for slot 4 with status banner | `triggerAction('slot4')` |
+| `Tab` | Toggle Combat / Harvest mode (rebinds hotbar) | `toggleMode()` |
+| `X` | Sheath current weapon (returns to unarmed pack) | `sheathWeapon()` |
+
+The on-screen hotbar (`#hotbarDisplay`) re-renders via `buildHotbarUI()` every time `WeaponAnimController` emits `change`, so the labels track the currently-equipped weapon type.
+
+Pointer controls are `OrbitControls` (left = rotate, right = pan, wheel = zoom) bound in `initScene()`.
+
+## Edit UI
+
+The right-hand panel is a tabbed editor wired up in `setupTabs()`. Each tab is populated by a dedicated builder so panels are independent:
+
+| Tab | Builder | Purpose |
+|---|---|---|
+| Equipment | `buildEquipmentUI(slots)` | Per-slot variant buttons grouped by `EquipmentManager.getGroupedSlots()`. Clicking a button calls `equipMgr.equip()` (armor) or `equipMgr.equipWeapon()` + `WeaponAnimController.equipWeapon()` (weapons/shields). The ✕ button calls `unequip(slot)`. |
+| Animations | `buildAnimationUI()` | `weaponPackSelect` dropdown drives `loadAnimation(packKey, fileName)`. |
+| Stats | `buildStatsPanel()` | 8 attribute sliders → `recalcStats()` → `calculateDerivedStats()`. |
+| Classes | `buildClassSelector()` | Class skill tree, no scene impact. |
+| Weapon Skills | `buildWeaponTypeGrid()` | Weapon mastery picker. |
+| Professions | `buildProfessionsPanel()` | T0–T8 profession tiers from `PROFESSIONS`. |
+| Weapon Mastery | `buildMasteryPanel()` | Simulated mastery XP per weapon. |
+| Saved Characters | `buildSavedCharactersList()` | `CharacterStore` CRUD with Save / Update / Load / Delete. |
+
+The status line at `#statusText` is updated by `updateStatus(msg)` after every model load, equipment change, save, and combat action.
+
+## Telemetry Pipeline
+
+User actions are batched in the browser by `src/modules/Telemetry.js` and POSTed to `models.grudge-studio.com/api/events`. The Worker validates the batch, stamps server-side `ts`, and forwards rows to the `grudge_events` Cloudflare Pipelines stream, which lands them in R2 as zstd-compressed Parquet partitioned by date/hour.
+
+### Event types
+
+| Event | Trigger | Top-level fields | Payload keys |
+|---|---|---|---|
+| `session_start` | `telemetry.init()` | — | `ua`, `lang` |
+| `session_end` | `pagehide` (sendBeacon) | — | — |
+| `asset_load` | Race model finishes loading | `faction_id`, `race_id` | `meshCount`, `animationCount`, `result` |
+| `equipment_change` | Armor slot button click | `faction_id`, `race_id`, `slot`, `variant` | `action` (`equip`/`unequip`) |
+| `weapon_equip` | Weapon/shield slot button click | `faction_id`, `race_id`, `slot`, `variant` | `animPack` |
+| `combat_action` | Combat hotkey pressed | `faction_id`, `race_id` | `action`, `weapon`, `mode` |
+| `character_save` | Save button | `faction_id`, `race_id` | `level`, `slots` |
+| `character_update` | Update button | `faction_id`, `race_id` | `level`, `slots` |
+
+Every row also gets `session_id` (random 16-hex per tab), `grudge_id` (set after sign-in), and the authoritative server `ts`. Anything not in the schema is dropped silently by Pipelines, so add new top-level columns by recreating the stream — do **not** stuff arbitrary fields outside `payload`.
+
+### Pipeline resources
+
+| Resource | Name | ID |
+|---|---|---|
+| R2 bucket | `grudge-events` | — |
+| Stream | `grudge_events_stream` | `074935299dc44ef089b448fdf065768f` |
+| Sink | `grudge_events_sink` | `2267fbbde5984e5591a3d003ba0b22e1` |
+| Pipeline | `grudge_events` | `d4de2ebbe8c04fa89a1e13f3bb3e9a97` |
+
+Schema source of truth: `d1/pipelines/grudge-events.schema.json`. Worker binding: `GRUDGE_EVENTS_STREAM` (see `wrangler.toml`).
+
+Smoke test the Worker endpoint:
+
+```powershell
+$body = '{"events":[{"event_type":"pipeline_smoke_test","payload":{"source":"local"}}]}'
+Invoke-RestMethod -Uri 'https://models.grudge-studio.com/api/events' -Method Post `
+  -ContentType 'application/json' -Body $body
+```
+
+## Dependencies
+
+Runtime (browser):
+
+- **three** — WebGL renderer, scene graph, loaders (FBX/GLTF/OBJ/STL/Collada/USDZ), `AnimationMixer`, `OrbitControls`.
+- **postprocessing** — Used by `PostFX.js` for bloom + tone mapping.
+- Native browser APIs only for telemetry — no analytics SDK.
+
+Build / tooling:
+
+- **vite** — Dev server + production bundler.
+- **wrangler** — Cloudflare Worker deploy + D1 + Pipelines management.
+- **@gltf-transform/cli** (via `npm run convert`) — FBX → GLB pipeline.
+
+Backend (separate repos, consumed only via HTTP):
+
+- **api.grudge-studio.com** — Grudge backend (Express + PostgreSQL + Drizzle ORM). Issues JWTs, owns character CRUD.
+- **models.grudge-studio.com** — This repo's Worker. Owns D1 manifest and events ingest.
+- **assets.grudge-studio.com** — R2 CDN. Static GLB + animation FBX bucket.
+
 ## Tech Stack
 
 - **Frontend:** Vanilla JS + Three.js, Vite
 - **3D:** FBXLoader + GLTFLoader (SmartLoader auto-detects), EquipmentManager mesh toggling
 - **Backend:** Grudge API (api.grudge-studio.com) — Express, PostgreSQL, Drizzle ORM
 - **Model Manifest:** Cloudflare D1 (SQLite at edge) + Worker API
+- **Events Pipeline:** Cloudflare Pipelines (stream → SQL → sink) → R2 Parquet+zstd
 - **Asset CDN:** Cloudflare R2 (assets.grudge-studio.com)
 - **Hosting:** Vercel (SPA deployment)
 - **Auth:** Grudge UUID + Discord/Google OAuth via backend

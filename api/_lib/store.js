@@ -1,23 +1,28 @@
 /**
  * Simple key-value store abstraction.
  *
- * In production with Vercel KV env vars set, uses the Vercel KV REST API.
- * Otherwise falls back to an in-memory Map (dev only — resets on cold start).
+ * Uses the Upstash Redis REST API when KV_REST_API_URL + KV_REST_API_TOKEN are
+ * set (provision at upstash.com or via the Vercel Marketplace → Upstash Redis).
+ * Falls back to an in-memory Map for local dev — data resets on cold start.
+ *
+ * Required env vars:
+ *   KV_REST_API_URL    — e.g. https://<name>.upstash.io
+ *   KV_REST_API_TOKEN  — Upstash REST token
  */
 
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+// Upstash provides UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN.
+// Also accept the legacy KV_REST_API_* names for compatibility.
+const KV_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 
-// ── Vercel KV REST helpers ──────────────────────────────────
 async function kvFetch(cmd, ...args) {
-  const body = [cmd, ...args];
   const resp = await fetch(`${KV_URL}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${KV_TOKEN}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify([cmd, ...args]),
   });
   if (!resp.ok) throw new Error(`KV error: ${resp.status}`);
   const data = await resp.json();

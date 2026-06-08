@@ -20,3 +20,17 @@ database_id = "2f836a43-153d-4502-8ff0-75a01c15ecb9"
 # [[r2_buckets]]
 # binding = "ASSETS"
 # bucket_name = "grudge-assets"
+
+# Pipelines binding — writes events to grudge_events stream
+# Stream → grudge_events_sink → r2://grudge-events (parquet+zstd, partitioned by date)
+[[pipelines]]
+binding = "GRUDGE_EVENTS_STREAM"
+pipeline = "074935299dc44ef089b448fdf065768f"
+
+# Workers AI binding — powers /api/ai/chat (editor AI assistant)
+[ai]
+binding = "AI"
+
+# Public character resolution — proxy target for /api/prefab/:uuid
+[vars]
+GRUDGE_API_BASE = "https://api.grudge-studio.com"

@@ -337,6 +337,7 @@
       <button class="tab-btn" data-tab="tabWeaponSkills">Wpn Skills</button>
       <button class="tab-btn" data-tab="tabProfessions">Professions</button>
       <button class="tab-btn" data-tab="tabMastery">Mastery</button>
+      <button class="tab-btn" data-tab="tabAI">AI</button>
     </div>
 
     <!-- Tab: Character (attrs + stats + combat) -->
@@ -376,6 +377,14 @@
       <p style="color:var(--muted);font-size:.7rem;margin-bottom:8px;">XP earned per weapon type through combat use</p>
       <div id="masteryList"></div>
     </div>
+<!-- Tab: AI Assistant -->
+<div class="tab-content" id="tabAI">
+  <h3>AI Assistant</h3>
+  <p style="color:var(--muted);font-size:.7rem;margin-bottom:8px;">
+    Describe a build and the assistant will swap race, equip gear, and adjust attributes for you.
+  </p>
+  <div id="aiChatRoot"></div>
+</div>
   </div>
 
   <!-- BOTTOM: Hotbar + Animations + Admin -->
@@ -425,6 +434,7 @@
   </div>
 </div>
 
+<script src="https://js.puter.com/v2/"></script>
 <script>
   // Mobile panel toggles — only functional at ≤768px (buttons hidden on desktop via CSS)
   document.getElementById('toggleLeftPanel').addEventListener('click', () => {

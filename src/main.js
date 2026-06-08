@@ -26,6 +26,9 @@ import { BossFight } from './modules/BossFight.js';
 import { VFXManager } from './modules/VFXManager.js';
 import { ForgePanel } from './modules/ForgePanel.js';
 import { resolveTextures, classifyStyle } from './modules/TextureResolver.js';
+import { telemetry, EVENT_TYPES } from "./modules/Telemetry.js";
+import { MANIFEST_API } from "./modules/AssetConfig.js";
+import { AIChat } from "./modules/AIChat.js";
 
 // ════════════════════════════════════════════════════════════
 // State
@@ -59,7 +62,7 @@ let forgePanel = null;
 // Scene Setup
 // ════════════════════════════════════════════════════════════
 function initScene() {
-  const container = document.getElementById('viewport');
+  const container = document.getElementById("viewport");
   clock = new THREE.Clock();
 
   scene = new THREE.Scene();
@@ -67,11 +70,19 @@ function initScene() {
   scene.fog = new THREE.Fog(0x1a1a2e, 30, 80);
 
   // Camera
-  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 200);
+  camera = new THREE.PerspectiveCamera(
+    45,
+    container.clientWidth / container.clientHeight,
+    0.1,
+    200,
+  );
   camera.position.set(0, 2.5, 5);
 
   // Renderer — best-in-class settings
-  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    powerPreference: "high-performance",
+  });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -117,7 +128,9 @@ function initScene() {
   // Ground
   const groundGeo = new THREE.PlaneGeometry(40, 40);
   const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x2a2a3e, roughness: 0.9, metalness: 0.1,
+    color: 0x2a2a3e,
+    roughness: 0.9,
+    metalness: 0.1,
   });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
@@ -130,7 +143,7 @@ function initScene() {
   scene.add(grid);
 
   // Resize
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -148,11 +161,13 @@ function initScene() {
   forgePanel.initDropZone(container);
 
   // Forge file input + export button
-  document.getElementById('forgeFileInput')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (file && forgePanel) await forgePanel.loadDroppedFile(file);
-  });
-  document.getElementById('forgeExport')?.addEventListener('click', () => {
+  document
+    .getElementById("forgeFileInput")
+    ?.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (file && forgePanel) await forgePanel.loadDroppedFile(file);
+    });
+  document.getElementById("forgeExport")?.addEventListener("click", () => {
     forgePanel?.exportJSON();
   });
 }
@@ -161,15 +176,18 @@ function initScene() {
 // Model Loading
 // ════════════════════════════════════════════════════════════
 async function loadCharacterModel(raceConfig) {
-  const overlay = document.getElementById('loadingOverlay');
-  const loadingText = document.getElementById('loadingText');
-  overlay.classList.remove('hidden');
+  const overlay = document.getElementById("loadingOverlay");
+  const loadingText = document.getElementById("loadingText");
+  overlay.classList.remove("hidden");
   loadingText.textContent = `Loading ${raceConfig.factionName} ${raceConfig.name}...`;
 
   // Clean up previous
   if (currentModel) {
     scene.remove(currentModel);
-    if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
+    if (skeletonHelper) {
+      scene.remove(skeletonHelper);
+      skeletonHelper = null;
+    }
     mixer?.stopAllAction();
     mixer = null;
     currentActions = {};
@@ -177,9 +195,13 @@ async function loadCharacterModel(raceConfig) {
   }
 
   try {
-    const { scene: model, animations } = await loadModel(raceConfig.model, (e) => {
-      if (e.total) loadingText.textContent = `Loading... ${Math.floor((e.loaded / e.total) * 100)}%`;
-    });
+    const { scene: model, animations } = await loadModel(
+      raceConfig.model,
+      (e) => {
+        if (e.total)
+          loadingText.textContent = `Loading... ${Math.floor((e.loaded / e.total) * 100)}%`;
+      },
+    );
 
     // Scale, center, shadows via SmartLoader helper
     prepareModel(model);
@@ -188,7 +210,9 @@ async function loadCharacterModel(raceConfig) {
     const texResult = await resolveTextures(model, raceConfig.model);
     if (texResult.discovered || texResult.generated) {
       const style = classifyStyle(model);
-      console.log(`[TextureResolver] ${texResult.discovered} discovered, ${texResult.generated} generated (${style} style)`);
+      console.log(
+        `[TextureResolver] ${texResult.discovered} discovered, ${texResult.generated} generated (${style} style)`,
+      );
     }
 
     scene.add(model);
@@ -197,7 +221,7 @@ async function loadCharacterModel(raceConfig) {
     // Setup AnimationMixer
     mixer = new THREE.AnimationMixer(model);
     if (animations.length > 0) {
-      animations.forEach(clip => {
+      animations.forEach((clip) => {
         currentActions[clip.name] = mixer.clipAction(clip);
       });
     }
@@ -210,21 +234,35 @@ async function loadCharacterModel(raceConfig) {
     vfxMgr = new VFXManager(scene, equipMgr.bones);
 
     // Weapon Animation Controller — binds weapon equips to animation packs
-    weaponCtrl = new WeaponAnimController(mixer, fbxLoader, updateStatus, vfxMgr);
+    weaponCtrl = new WeaponAnimController(
+      mixer,
+      fbxLoader,
+      updateStatus,
+      vfxMgr,
+    );
     weaponCtrl.setModel(model);
     weaponCtrl.onChange(() => buildHotbarUI());
 
-    updateStatus(`Loaded ${raceConfig.name}: ${equipMgr.meshCount} equipment meshes found`);
+    updateStatus(
+      `Loaded ${raceConfig.name}: ${equipMgr.meshCount} equipment meshes found`,
+    );
     buildEquipmentUI(slots);
     buildHotbarUI();
-    overlay.classList.add('hidden');
+    overlay.classList.add("hidden");
 
+    telemetry.track(EVENT_TYPES.ASSET_LOAD, {
+      faction_id: currentFactionId,
+      race_id: currentRaceId,
+      meshCount: equipMgr.meshCount,
+      animationCount: animations.length,
+      result: "ok",
+    });
   } catch (err) {
     loadingText.textContent = `Error: ${err.message}`;
     updateStatus(`Failed to load model: ${err.message}`);
     console.error(err);
     // Hide overlay after 3s so user can retry
-    setTimeout(() => overlay.classList.add('hidden'), 3000);
+    setTimeout(() => overlay.classList.add("hidden"), 3000);
   }
 }
 
@@ -243,7 +281,7 @@ async function loadAnimation(packKey, fileName) {
 
     if (clips.length > 0) {
       const clip = clips[0];
-      clip.name = fileName.replace(/\.(fbx|FBX|gltf|glb)$/i, '');
+      clip.name = fileName.replace(/\.(fbx|FBX|gltf|glb)$/i, "");
 
       // Store and play
       if (currentActions[clip.name]) {
@@ -267,7 +305,8 @@ function fadeToAction(name, duration = 0.2) {
   if (!nextAction) return;
 
   nextAction.reset().play();
-  nextAction.timeScale = parseFloat(document.getElementById('animSpeed').value) || 1.0;
+  nextAction.timeScale =
+    parseFloat(document.getElementById("animSpeed").value) || 1.0;
 
   if (currentAction && currentAction !== nextAction) {
     currentAction.crossFadeTo(nextAction, duration, false);
@@ -279,23 +318,32 @@ function fadeToAction(name, duration = 0.2) {
 // UI Builders
 // ════════════════════════════════════════════════════════════
 function buildRaceSelector() {
-  const container = document.getElementById('raceSelector');
+  const container = document.getElementById("raceSelector");
   const races = getAllRaces();
 
-  container.innerHTML = races.map(r => `
+  container.innerHTML = races
+    .map(
+      (r) => `
     <button class="faction-btn" data-faction="${r.factionId}" data-race="${r.raceId}">
       <span class="faction-dot" style="background:${r.factionColor}"></span>
       <span>${r.factionName} — ${r.name}</span>
     </button>
-  `).join('');
+  `,
+    )
+    .join("");
 
-  container.addEventListener('click', (e) => {
-    const btn = e.target.closest('.faction-btn');
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest(".faction-btn");
     if (!btn) return;
-    container.querySelectorAll('.faction-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    container
+      .querySelectorAll(".faction-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
 
-    const race = races.find(r => r.factionId === btn.dataset.faction && r.raceId === btn.dataset.race);
+    const race = races.find(
+      (r) =>
+        r.factionId === btn.dataset.faction && r.raceId === btn.dataset.race,
+    );
     if (race) {
       currentFactionId = race.factionId;
       currentRaceId = race.raceId;
@@ -305,10 +353,10 @@ function buildRaceSelector() {
 }
 
 function buildEquipmentUI(slots) {
-  const container = document.getElementById('equipmentPanel');
+  const container = document.getElementById("equipmentPanel");
   const grouped = equipMgr.getGroupedSlots();
 
-  let html = '';
+  let html = "";
   for (const [groupName, groupSlots] of Object.entries(grouped)) {
     const slotEntries = Object.entries(groupSlots);
     if (slotEntries.length === 0) continue;
@@ -317,9 +365,9 @@ function buildEquipmentUI(slots) {
     for (const [slot, info] of slotEntries) {
       html += `<div class="slot-row"><span class="slot-label">${slot}</span>`;
       for (const variant of info.variants) {
-        const label = variant === '_default' ? '●' : variant;
+        const label = variant === "_default" ? "●" : variant;
         const isEquipped = info.equipped === variant;
-        html += `<button class="slot-btn ${isEquipped ? 'equipped' : ''}"
+        html += `<button class="slot-btn ${isEquipped ? "equipped" : ""}"
           data-slot="${slot}" data-variant="${variant}">${label}</button>`;
       }
       html += `<button class="slot-btn" data-slot="${slot}" data-variant="_none" title="Unequip">✕</button>`;
@@ -329,34 +377,68 @@ function buildEquipmentUI(slots) {
   }
   container.innerHTML = html;
 
-  container.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.slot-btn');
+  container.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".slot-btn");
     if (!btn) return;
     const { slot, variant } = btn.dataset;
 
-    if (variant === '_none') {
+    if (variant === "_none") {
       equipMgr.unequip(slot);
       // If unequipping a weapon, sheath animations
       if (WEAPON_ANIM_MAP[slot] && weaponCtrl) {
         weaponCtrl.sheathWeapon();
       }
+      telemetry.track(EVENT_TYPES.EQUIPMENT_CHANGE, {
+        faction_id: currentFactionId,
+        race_id: currentRaceId,
+        slot,
+        variant: null,
+        action: "unequip",
+      });
     } else {
       // Use equipWeapon for weapon/shield slots for mutual exclusion
-      const isWeaponSlot = ['axe','hammer','sword','pick','spear','bow','staff','shield'].includes(slot);
+      const isWeaponSlot = [
+        "axe",
+        "hammer",
+        "sword",
+        "pick",
+        "spear",
+        "bow",
+        "staff",
+        "shield",
+      ].includes(slot);
       if (isWeaponSlot) {
         equipMgr.equipWeapon(slot, variant);
         // Auto-switch to weapon's animation pack
         if (WEAPON_ANIM_MAP[slot] && weaponCtrl && currentModel && mixer) {
-          await weaponCtrl.equipWeapon(slot, WEAPON_ANIMATION_PACKS, currentModel);
+          await weaponCtrl.equipWeapon(
+            slot,
+            WEAPON_ANIMATION_PACKS,
+            currentModel,
+          );
           // Auto-select the animation pack in the dropdown
-          const packSelect = document.getElementById('weaponPackSelect');
+          const packSelect = document.getElementById("weaponPackSelect");
           if (packSelect) {
             packSelect.value = WEAPON_ANIM_MAP[slot].animPack;
-            packSelect.dispatchEvent(new Event('change'));
+            packSelect.dispatchEvent(new Event("change"));
           }
         }
+        telemetry.track(EVENT_TYPES.WEAPON_EQUIP, {
+          faction_id: currentFactionId,
+          race_id: currentRaceId,
+          slot,
+          variant,
+          animPack: WEAPON_ANIM_MAP[slot]?.animPack || null,
+        });
       } else {
         equipMgr.equip(slot, variant);
+        telemetry.track(EVENT_TYPES.EQUIPMENT_CHANGE, {
+          faction_id: currentFactionId,
+          race_id: currentRaceId,
+          slot,
+          variant,
+          action: "equip",
+        });
       }
     }
     // Refresh UI
@@ -365,54 +447,66 @@ function buildEquipmentUI(slots) {
 }
 
 function buildAnimationUI() {
-  const select = document.getElementById('weaponPackSelect');
+  const select = document.getElementById("weaponPackSelect");
   for (const [key, pack] of Object.entries(WEAPON_ANIMATION_PACKS)) {
-    const opt = document.createElement('option');
+    const opt = document.createElement("option");
     opt.value = key;
     opt.textContent = pack.name;
     select.appendChild(opt);
   }
 
-  select.addEventListener('change', () => {
+  select.addEventListener("change", () => {
     const pack = WEAPON_ANIMATION_PACKS[select.value];
-    const list = document.getElementById('animList');
-    if (!pack) { list.innerHTML = ''; return; }
+    const list = document.getElementById("animList");
+    if (!pack) {
+      list.innerHTML = "";
+      return;
+    }
 
-    list.innerHTML = pack.files.map(f => {
-      const label = f.replace('.fbx', '').replace('.FBX', '');
-      return `<button class="anim-btn" data-pack="${select.value}" data-file="${f}" title="${label}">${label}</button>`;
-    }).join('');
+    list.innerHTML = pack.files
+      .map((f) => {
+        const label = f.replace(".fbx", "").replace(".FBX", "");
+        return `<button class="anim-btn" data-pack="${select.value}" data-file="${f}" title="${label}">${label}</button>`;
+      })
+      .join("");
   });
 
-  document.getElementById('animList').addEventListener('click', (e) => {
-    const btn = e.target.closest('.anim-btn');
+  document.getElementById("animList").addEventListener("click", (e) => {
+    const btn = e.target.closest(".anim-btn");
     if (!btn) return;
     loadAnimation(btn.dataset.pack, btn.dataset.file);
   });
 
   // Speed control
-  document.getElementById('animSpeed').addEventListener('input', (e) => {
+  document.getElementById("animSpeed").addEventListener("input", (e) => {
     const val = parseFloat(e.target.value);
-    document.getElementById('animSpeedVal').textContent = val.toFixed(1) + 'x';
+    document.getElementById("animSpeedVal").textContent = val.toFixed(1) + "x";
     if (currentAction) currentAction.timeScale = val;
   });
 
   // Pause/Stop
-  document.getElementById('animPause').addEventListener('click', () => {
+  document.getElementById("animPause").addEventListener("click", () => {
     if (currentAction) {
       currentAction.paused = !currentAction.paused;
-      document.getElementById('animPause').textContent = currentAction.paused ? '▶ Play' : '⏸ Pause';
+      document.getElementById("animPause").textContent = currentAction.paused
+        ? "▶ Play"
+        : "⏸ Pause";
     }
   });
-  document.getElementById('animStop').addEventListener('click', () => {
-    if (currentAction) { currentAction.stop(); currentAction = null; }
-    document.querySelectorAll('.anim-btn').forEach(b => b.classList.remove('playing'));
+  document.getElementById("animStop").addEventListener("click", () => {
+    if (currentAction) {
+      currentAction.stop();
+      currentAction = null;
+    }
+    document
+      .querySelectorAll(".anim-btn")
+      .forEach((b) => b.classList.remove("playing"));
   });
 }
 
 function highlightAnimButton(name) {
-  document.querySelectorAll('.anim-btn').forEach(b => {
-    b.classList.toggle('playing', b.textContent === name);
+  document.querySelectorAll(".anim-btn").forEach((b) => {
+    b.classList.toggle("playing", b.textContent === name);
   });
 }
 
@@ -420,18 +514,18 @@ function highlightAnimButton(name) {
 // Stats Panel
 // ════════════════════════════════════════════════════════════
 function buildStatsPanel() {
-  const container = document.getElementById('attributeSliders');
-  container.innerHTML = ATTR_KEYS.map(key => {
+  const container = document.getElementById("attributeSliders");
+  container.innerHTML = ATTR_KEYS.map((key) => {
     const attr = ATTRIBUTES[key];
     return `<div class="attr-row">
       <label style="color:${attr.color}" title="${attr.desc}">${attr.icon} ${key}</label>
       <input type="range" min="0" max="80" value="${character.attrs[key]}" data-attr="${key}">
       <span class="val" data-val="${key}">${character.attrs[key]}</span>
     </div>`;
-  }).join('');
+  }).join("");
 
-  container.addEventListener('input', (e) => {
-    const slider = e.target.closest('input[data-attr]');
+  container.addEventListener("input", (e) => {
+    const slider = e.target.closest("input[data-attr]");
     if (!slider) return;
     const key = slider.dataset.attr;
     character.attrs[key] = parseInt(slider.value);
@@ -443,63 +537,119 @@ function buildStatsPanel() {
 }
 
 function recalcStats() {
-  const total = ATTR_KEYS.reduce((sum, k) => sum + (character.attrs[k] || 0), 0);
-  document.getElementById('pointsDisplay').textContent = `${total} / ${MAX_POINTS}`;
-  document.getElementById('pointsDisplay').style.color = total > MAX_POINTS ? '#ef4444' : total === MAX_POINTS ? '#6ee7b7' : '#e8eaf6';
+  const total = ATTR_KEYS.reduce(
+    (sum, k) => sum + (character.attrs[k] || 0),
+    0,
+  );
+  document.getElementById("pointsDisplay").textContent =
+    `${total} / ${MAX_POINTS}`;
+  document.getElementById("pointsDisplay").style.color =
+    total > MAX_POINTS
+      ? "#ef4444"
+      : total === MAX_POINTS
+        ? "#6ee7b7"
+        : "#e8eaf6";
 
   character.stats = calculateDerivedStats(character.attrs, character.level);
 
-  const statsEl = document.getElementById('derivedStats');
+  const statsEl = document.getElementById("derivedStats");
   const statSections = [
-    { title: '⚔️ Offense', css: 'offense', stats: {
-      meleeAttack: 'Melee ATK', rangedAttack: 'Ranged ATK', spellPower: 'Spell Power',
-      attackSpeed: 'ATK Speed', critChance: 'Crit %', critDamage: 'Crit DMG %',
-      defenseBreak: 'Def Break', armorPenetration: 'Armor Pen', accuracy: 'Accuracy',
-    }},
-    { title: '🛡️ Defense', css: 'defense', stats: {
-      maxHP: 'Max HP', maxMana: 'Max Mana', maxStamina: 'Max Stamina',
-      defense: 'Defense', magicResist: 'Magic Res', blockChance: 'Block %',
-      blockFactor: 'Block Factor', dodgeChance: 'Dodge %', critEvasion: 'Crit Evasion',
-      ccResistance: 'CC Resist', absorbFactor: 'Absorb %',
-    }},
-    { title: '💚 Regen', css: 'regen', stats: {
-      hpRegen: 'HP / sec', manaRegen: 'Mana / sec', staminaRegen: 'Stam / sec',
-    }},
-    { title: '⚡ Utility', css: 'utility', stats: {
-      moveSpeed: 'Move Speed', cooldownReduction: 'CDR %', abilityCostRed: 'Cost Reduce %',
-      comboCooldownRed: 'Combo CDR %', carryWeight: 'Carry Weight',
-      miningBonus: 'Mining +', craftingBonus: 'Crafting +', harvestBonus: 'Harvest +',
-    }},
-    { title: '💀 Summary', css: 'offense', stats: {
-      combatPower: 'Combat Power',
-    }},
+    {
+      title: "⚔️ Offense",
+      css: "offense",
+      stats: {
+        meleeAttack: "Melee ATK",
+        rangedAttack: "Ranged ATK",
+        spellPower: "Spell Power",
+        attackSpeed: "ATK Speed",
+        critChance: "Crit %",
+        critDamage: "Crit DMG %",
+        defenseBreak: "Def Break",
+        armorPenetration: "Armor Pen",
+        accuracy: "Accuracy",
+      },
+    },
+    {
+      title: "🛡️ Defense",
+      css: "defense",
+      stats: {
+        maxHP: "Max HP",
+        maxMana: "Max Mana",
+        maxStamina: "Max Stamina",
+        defense: "Defense",
+        magicResist: "Magic Res",
+        blockChance: "Block %",
+        blockFactor: "Block Factor",
+        dodgeChance: "Dodge %",
+        critEvasion: "Crit Evasion",
+        ccResistance: "CC Resist",
+        absorbFactor: "Absorb %",
+      },
+    },
+    {
+      title: "💚 Regen",
+      css: "regen",
+      stats: {
+        hpRegen: "HP / sec",
+        manaRegen: "Mana / sec",
+        staminaRegen: "Stam / sec",
+      },
+    },
+    {
+      title: "⚡ Utility",
+      css: "utility",
+      stats: {
+        moveSpeed: "Move Speed",
+        cooldownReduction: "CDR %",
+        abilityCostRed: "Cost Reduce %",
+        comboCooldownRed: "Combo CDR %",
+        carryWeight: "Carry Weight",
+        miningBonus: "Mining +",
+        craftingBonus: "Crafting +",
+        harvestBonus: "Harvest +",
+      },
+    },
+    {
+      title: "💀 Summary",
+      css: "offense",
+      stats: {
+        combatPower: "Combat Power",
+      },
+    },
   ];
 
-  const fmt = (v) => typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(1)) : v;
-  statsEl.innerHTML = statSections.map(sec => {
-    const rows = Object.entries(sec.stats).map(([key, label]) => {
-      const val = character.stats[key] ?? 0;
-      return `<div class="stat-item stat-item--${sec.css}"><span class="label">${label}</span><span class="value">${fmt(val)}</span></div>`;
-    }).join('');
-    return `<div style="grid-column:1/-1;font-size:.65rem;color:var(--muted);padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">${sec.title}</div>${rows}`;
-  }).join('');
+  const fmt = (v) =>
+    typeof v === "number" ? (Number.isInteger(v) ? v : v.toFixed(1)) : v;
+  statsEl.innerHTML = statSections
+    .map((sec) => {
+      const rows = Object.entries(sec.stats)
+        .map(([key, label]) => {
+          const val = character.stats[key] ?? 0;
+          return `<div class="stat-item stat-item--${sec.css}"><span class="label">${label}</span><span class="value">${fmt(val)}</span></div>`;
+        })
+        .join("");
+      return `<div style="grid-column:1/-1;font-size:.65rem;color:var(--muted);padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">${sec.title}</div>${rows}`;
+    })
+    .join("");
 }
 
 // Combat test
 function setupCombatTest() {
   const dummy = createDefaultCharacter(10);
   // Dummy has even stats but lower
-  ATTR_KEYS.forEach(k => dummy.attrs[k] = 15);
+  ATTR_KEYS.forEach((k) => (dummy.attrs[k] = 15));
   dummy.stats = calculateDerivedStats(dummy.attrs, 10);
 
-  document.getElementById('combatTestBtn').addEventListener('click', () => {
+  document.getElementById("combatTestBtn").addEventListener("click", () => {
     const result = simulateCombat(character, dummy);
-    const logEl = document.getElementById('combatLog');
-    logEl.innerHTML = result.log.map(line => {
-      if (line.includes('CRITICAL')) return `<div class="crit">${line}</div>`;
-      if (line.includes('BLOCKED')) return `<div class="block">${line}</div>`;
-      return `<div>${line}</div>`;
-    }).join('');
+    const logEl = document.getElementById("combatLog");
+    logEl.innerHTML = result.log
+      .map((line) => {
+        if (line.includes("CRITICAL")) return `<div class="crit">${line}</div>`;
+        if (line.includes("BLOCKED")) return `<div class="block">${line}</div>`;
+        return `<div>${line}</div>`;
+      })
+      .join("");
     logEl.scrollTop = logEl.scrollHeight;
   });
 }
@@ -509,25 +659,31 @@ function setupCombatTest() {
 // ════════════════════════════════════════════════════════════
 function setupAdminPanel() {
   // Toggle wireframe
-  document.getElementById('toggleWireframe').addEventListener('click', () => {
+  document.getElementById("toggleWireframe").addEventListener("click", () => {
     wireframeMode = !wireframeMode;
-    currentModel?.traverse(child => {
+    currentModel?.traverse((child) => {
       if (child.isMesh || child.isSkinnedMesh) {
-        const mats = Array.isArray(child.material) ? child.material : [child.material];
-        mats.forEach(m => { m.wireframe = wireframeMode; });
+        const mats = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        mats.forEach((m) => {
+          m.wireframe = wireframeMode;
+        });
       }
     });
-    updateStatus(`Wireframe: ${wireframeMode ? 'ON' : 'OFF'}`);
+    updateStatus(`Wireframe: ${wireframeMode ? "ON" : "OFF"}`);
   });
 
   // Toggle skeleton helper
-  document.getElementById('toggleSkeleton').addEventListener('click', () => {
+  document.getElementById("toggleSkeleton").addEventListener("click", () => {
     if (skeletonHelper) {
       scene.remove(skeletonHelper);
       skeletonHelper = null;
     } else if (currentModel) {
       let skeleton = null;
-      currentModel.traverse(c => { if (c.isSkinnedMesh && !skeleton) skeleton = c; });
+      currentModel.traverse((c) => {
+        if (c.isSkinnedMesh && !skeleton) skeleton = c;
+      });
       if (skeleton) {
         skeletonHelper = new SkeletonHelper(currentModel);
         scene.add(skeletonHelper);
@@ -536,25 +692,28 @@ function setupAdminPanel() {
   });
 
   // Show all equipment
-  document.getElementById('showAllParts').addEventListener('click', () => {
+  document.getElementById("showAllParts").addEventListener("click", () => {
     if (equipMgr) {
       equipMgr.showAll();
       buildEquipmentUI(equipMgr.getSlotSummary());
-      updateStatus('All equipment visible');
+      updateStatus("All equipment visible");
     }
   });
 
   // Reset camera
-  document.getElementById('resetCamera').addEventListener('click', () => {
+  document.getElementById("resetCamera").addEventListener("click", () => {
     camera.position.set(0, 2.5, 5);
     controls.target.set(0, 1, 0);
     controls.update();
   });
 
   // Spawn test dummy
-  document.getElementById('spawnDummy').addEventListener('click', () => {
+  document.getElementById("spawnDummy").addEventListener("click", () => {
     const geo = new THREE.CapsuleGeometry(0.3, 1.2, 4, 8);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xcc4444, roughness: 0.6 });
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xcc4444,
+      roughness: 0.6,
+    });
     const dummy = new THREE.Mesh(geo, mat);
     const angle = Math.random() * Math.PI * 2;
     const dist = 3 + Math.random() * 3;
@@ -566,41 +725,47 @@ function setupAdminPanel() {
   });
 
   // Toggle PostFX
-  const pfxBtn = document.getElementById('togglePostFX');
-  if (pfxBtn) pfxBtn.addEventListener("click", () => {
-    if (postfx) {
-      const on = postfx.toggle();
-      updateStatus("Post-processing: " + (on ? "ON" : "OFF"));
-    }
-  });
+  const pfxBtn = document.getElementById("togglePostFX");
+  if (pfxBtn)
+    pfxBtn.addEventListener("click", () => {
+      if (postfx) {
+        const on = postfx.toggle();
+        updateStatus("Post-processing: " + (on ? "ON" : "OFF"));
+      }
+    });
 
   // Boss Fight button
-  const bossBtn = document.getElementById('startBossFight');
-  if (bossBtn) bossBtn.addEventListener("click", async () => {
-    if (!bossFight) return;
-    if (bossFight.isActive) {
-      bossFight.exit();
-    } else {
-      if (!currentModel) { updateStatus("Load a character first!"); return; }
-      await bossFight.enter(currentModel, mixer);
-    }
-  });
+  const bossBtn = document.getElementById("startBossFight");
+  if (bossBtn)
+    bossBtn.addEventListener("click", async () => {
+      if (!bossFight) return;
+      if (bossFight.isActive) {
+        bossFight.exit();
+      } else {
+        if (!currentModel) {
+          updateStatus("Load a character first!");
+          return;
+        }
+        await bossFight.enter(currentModel, mixer);
+      }
+    });
 
   // List bones (debug)
-  const bonesBtn = document.getElementById('listBones');
-  if (bonesBtn) bonesBtn.addEventListener("click", () => {
-    if (!currentModel) return;
-    const bones = BoneAttachment.listBones(currentModel);
-    console.log("Bones:", bones);
-    updateStatus(bones.length + " bones — see console");
-  });
+  const bonesBtn = document.getElementById("listBones");
+  if (bonesBtn)
+    bonesBtn.addEventListener("click", () => {
+      if (!currentModel) return;
+      const bones = BoneAttachment.listBones(currentModel);
+      console.log("Bones:", bones);
+      updateStatus(bones.length + " bones — see console");
+    });
 }
 
 // ════════════════════════════════════════════════════════════
 // Utility
 // ════════════════════════════════════════════════════════════
 function updateStatus(msg) {
-  document.getElementById('statusBar').textContent = msg;
+  document.getElementById("statusBar").textContent = msg;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -632,15 +797,19 @@ function animate() {
 // Tab System
 // ════════════════════════════════════════════════════════════
 function setupTabs() {
-  const tabBar = document.getElementById('mainTabBar');
-  tabBar.addEventListener('click', (e) => {
-    const btn = e.target.closest('.tab-btn');
+  const tabBar = document.getElementById("mainTabBar");
+  tabBar.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab-btn");
     if (!btn) return;
     const tabId = btn.dataset.tab;
-    tabBar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('#rightPanel .tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
+    tabBar
+      .querySelectorAll(".tab-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    document
+      .querySelectorAll("#rightPanel .tab-content")
+      .forEach((c) => c.classList.remove("active"));
+    document.getElementById(tabId).classList.add("active");
   });
 }
 
@@ -650,8 +819,10 @@ function setupTabs() {
 let selectedClass = null;
 
 function buildClassSelector() {
-  const container = document.getElementById('classSelector');
-  container.innerHTML = Object.entries(CLASSES).map(([id, cls]) => `
+  const container = document.getElementById("classSelector");
+  container.innerHTML = Object.entries(CLASSES)
+    .map(
+      ([id, cls]) => `
     <div class="class-card" data-class="${id}">
       <div class="class-header">
         <span style="color:${cls.color}">${cls.icon}</span>
@@ -660,47 +831,56 @@ function buildClassSelector() {
       </div>
       <div class="class-desc">${cls.desc}</div>
     </div>
-  `).join('');
+  `,
+    )
+    .join("");
 
-  container.addEventListener('click', (e) => {
-    const card = e.target.closest('.class-card');
+  container.addEventListener("click", (e) => {
+    const card = e.target.closest(".class-card");
     if (!card) return;
     selectedClass = card.dataset.class;
-    container.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
+    container
+      .querySelectorAll(".class-card")
+      .forEach((c) => c.classList.remove("selected"));
+    card.classList.add("selected");
     buildClassSkillTrees(selectedClass);
   });
 }
 
 function buildClassSkillTrees(classId) {
-  const container = document.getElementById('classSkillTrees');
+  const container = document.getElementById("classSkillTrees");
   const classData = CLASS_SKILLS[classId];
-  if (!classData) { container.innerHTML = ''; return; }
+  if (!classData) {
+    container.innerHTML = "";
+    return;
+  }
 
   const cls = CLASSES[classId];
   let html = `<p style="font-size:.7rem;color:var(--muted);margin-bottom:6px;">${cls.passive}</p>`;
-  html += `<p style="font-size:.65rem;color:var(--muted);margin-bottom:8px;">Weapons: ${cls.weaponTypes.map(w => WEAPON_TYPES[w]?.name || w).join(', ')}</p>`;
+  html += `<p style="font-size:.65rem;color:var(--muted);margin-bottom:8px;">Weapons: ${cls.weaponTypes.map((w) => WEAPON_TYPES[w]?.name || w).join(", ")}</p>`;
 
   for (const [treeId, tree] of Object.entries(classData.trees)) {
     html += `<div class="tree-section">`;
     html += `<div class="tree-header">${tree.icon} ${tree.name} <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">${tree.desc}</span></div>`;
     for (const skill of tree.skills) {
-      const modelBadge = skill.model ? ' <span style="color:#fbbf24;font-size:.6rem;">[3D]</span>' : '';
+      const modelBadge = skill.model
+        ? ' <span style="color:#fbbf24;font-size:.6rem;">[3D]</span>'
+        : "";
       html += `<div class="skill-node">
         <span class="skill-lvl">Lv${skill.level}</span>
         <span class="skill-name">${skill.name}${modelBadge}</span>
         <span class="skill-cost">${skill.cost}pt</span>
-        <div class="skill-desc">${skill.desc}${skill.model ? '<br><em style="color:#fbbf24;">Has 3D form model</em>' : ''}</div>
+        <div class="skill-desc">${skill.desc}${skill.model ? '<br><em style="color:#fbbf24;">Has 3D form model</em>' : ""}</div>
       </div>`;
     }
     html += `</div>`;
   }
 
   // Show Worge forms preview if Worge class
-  if (classId === 'worge') {
+  if (classId === "worge") {
     html += `<h3 style="margin-top:10px;">Form Models</h3>`;
     for (const [fid, form] of Object.entries(WORGE_FORMS)) {
-      const hasModel = form.model ? '\u2705' : '\u274c';
+      const hasModel = form.model ? "\u2705" : "\u274c";
       html += `<div class="skill-node">
         <span class="skill-lvl">${form.icon}</span>
         <span class="skill-name">${form.name} ${hasModel}</span>
@@ -716,27 +896,35 @@ function buildClassSkillTrees(classId) {
 // Weapon Skills Tab
 // ════════════════════════════════════════════════════════════
 function buildWeaponTypeGrid() {
-  const grid = document.getElementById('weaponTypeGrid');
-  grid.innerHTML = Object.entries(WEAPON_TYPES).map(([id, wep]) =>
-    `<button class="wep-type-btn" data-wep="${id}" title="${wep.name}">${wep.icon}<br>${wep.name.split(' ').pop()}</button>`
-  ).join('');
+  const grid = document.getElementById("weaponTypeGrid");
+  grid.innerHTML = Object.entries(WEAPON_TYPES)
+    .map(
+      ([id, wep]) =>
+        `<button class="wep-type-btn" data-wep="${id}" title="${wep.name}">${wep.icon}<br>${wep.name.split(" ").pop()}</button>`,
+    )
+    .join("");
 
-  grid.addEventListener('click', (e) => {
-    const btn = e.target.closest('.wep-type-btn');
+  grid.addEventListener("click", (e) => {
+    const btn = e.target.closest(".wep-type-btn");
     if (!btn) return;
-    grid.querySelectorAll('.wep-type-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    grid
+      .querySelectorAll(".wep-type-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
     buildWeaponSkillTree(btn.dataset.wep);
   });
 }
 
 function buildWeaponSkillTree(weaponId) {
-  const container = document.getElementById('weaponSkillTree');
+  const container = document.getElementById("weaponSkillTree");
   const wepData = WEAPON_SKILLS[weaponId];
   const wepType = WEAPON_TYPES[weaponId];
-  if (!wepData) { container.innerHTML = ''; return; }
+  if (!wepData) {
+    container.innerHTML = "";
+    return;
+  }
 
-  let html = `<p style="font-size:.65rem;color:var(--muted);margin-bottom:6px;">Classes: ${wepType.classes.map(c => CLASSES[c]?.name || c).join(', ')} • ${wepType.hand.toUpperCase()}</p>`;
+  let html = `<p style="font-size:.65rem;color:var(--muted);margin-bottom:6px;">Classes: ${wepType.classes.map((c) => CLASSES[c]?.name || c).join(", ")} • ${wepType.hand.toUpperCase()}</p>`;
   html += `<div class="tree-section">`;
   html += `<div class="tree-header">${wepData.icon} ${wepData.name} Skill Tree</div>`;
   for (const skill of wepData.skills) {
@@ -755,16 +943,20 @@ function buildWeaponSkillTree(weaponId) {
 // Professions Tab
 // ════════════════════════════════════════════════════════════
 function buildProfessionsPanel() {
-  const container = document.getElementById('professionsList');
-  container.innerHTML = Object.entries(PROFESSIONS).map(([id, prof]) => {
-    const tiers = prof.tiers.map(t =>
-      `<div class="prof-tier">
+  const container = document.getElementById("professionsList");
+  container.innerHTML = Object.entries(PROFESSIONS)
+    .map(([id, prof]) => {
+      const tiers = prof.tiers
+        .map(
+          (t) =>
+            `<div class="prof-tier">
         <span class="tier-lvl">Lv${t.level}</span>
         <span class="tier-name">${t.name}</span>
-        <span class="tier-res">${t.resources.join(', ')}</span>
-      </div>`
-    ).join('');
-    return `<div class="prof-card">
+        <span class="tier-res">${t.resources.join(", ")}</span>
+      </div>`,
+        )
+        .join("");
+      return `<div class="prof-card">
       <div class="prof-header">
         <span>${prof.icon}</span>
         <span style="color:${prof.color}">${prof.name}</span>
@@ -773,26 +965,28 @@ function buildProfessionsPanel() {
       <p style="font-size:.65rem;color:var(--muted);margin-bottom:4px;">${prof.desc}</p>
       ${tiers}
     </div>`;
-  }).join('');
+    })
+    .join("");
 }
 
 // ════════════════════════════════════════════════════════════
 // Weapon Mastery Tab
 // ════════════════════════════════════════════════════════════
 function buildMasteryPanel() {
-  const container = document.getElementById('masteryList');
+  const container = document.getElementById("masteryList");
   // Simulated mastery XP per weapon (in real game, this comes from server)
   const simulatedXP = {};
   for (const id of Object.keys(WEAPON_TYPES)) {
     simulatedXP[id] = Math.floor(Math.random() * 15000);
   }
 
-  container.innerHTML = Object.entries(WEAPON_TYPES).map(([id, wep]) => {
-    const xp = simulatedXP[id];
-    const { current, next, progress } = getMasteryProgress(xp);
-    const pct = Math.floor(progress * 100);
-    const nextLabel = next ? `${next.name} (${next.xp} XP)` : 'MAX';
-    return `<div class="mastery-row">
+  container.innerHTML = Object.entries(WEAPON_TYPES)
+    .map(([id, wep]) => {
+      const xp = simulatedXP[id];
+      const { current, next, progress } = getMasteryProgress(xp);
+      const pct = Math.floor(progress * 100);
+      const nextLabel = next ? `${next.name} (${next.xp} XP)` : "MAX";
+      return `<div class="mastery-row">
       <span class="mastery-icon">${wep.icon}</span>
       <div class="mastery-info">
         <div class="mastery-name">${wep.name}</div>
@@ -801,43 +995,49 @@ function buildMasteryPanel() {
       </div>
       <span class="mastery-xp">${xp} XP</span>
     </div>`;
-  }).join('');
+    })
+    .join("");
 }
 
 // ════════════════════════════════════════════════════════════
 // Persistence UI
 // ════════════════════════════════════════════════════════════
 function buildSavedCharactersList() {
-  const container = document.getElementById('savedCharactersList');
-  const countEl = document.getElementById('charCount');
+  const container = document.getElementById("savedCharactersList");
+  const countEl = document.getElementById("charCount");
   const chars = characterStore.characters;
   countEl.textContent = `(${chars.length})`;
 
   if (chars.length === 0) {
-    container.innerHTML = '<p style="color:var(--muted);font-size:.8rem;">No saved characters yet</p>';
+    container.innerHTML =
+      '<p style="color:var(--muted);font-size:.8rem;">No saved characters yet</p>';
     return;
   }
 
-  container.innerHTML = chars.map(c => `
-    <div class="saved-char ${c.id === characterStore.activeId ? 'active' : ''}" data-id="${c.id}">
+  container.innerHTML = chars
+    .map(
+      (c) => `
+    <div class="saved-char ${c.id === characterStore.activeId ? "active" : ""}" data-id="${c.id}">
       <span class="char-name">${c.name}</span>
       <span class="char-race">${c.factionId}/${c.raceId}</span>
       <span class="char-delete" data-delete="${c.id}" title="Delete">✕</span>
     </div>
-  `).join('');
+  `,
+    )
+    .join("");
 
-  container.addEventListener('click', async (e) => {
-    const deleteBtn = e.target.closest('[data-delete]');
+  container.addEventListener("click", async (e) => {
+    const deleteBtn = e.target.closest("[data-delete]");
     if (deleteBtn) {
       e.stopPropagation();
       const id = deleteBtn.dataset.delete;
-      if (confirm('Delete this character?')) {
+      if (confirm("Delete this character?")) {
         await characterStore.remove(id);
-        updateStatus('Character deleted');
+        updateStatus("Character deleted");
       }
       return;
     }
-    const row = e.target.closest('.saved-char');
+    const row = e.target.closest(".saved-char");
     if (!row) return;
     const id = row.dataset.id;
     characterStore.setActive(id);
@@ -846,11 +1046,13 @@ function buildSavedCharactersList() {
 }
 
 function loadSavedCharacter(id) {
-  const char = characterStore.characters.find(c => c.id === id);
+  const char = characterStore.characters.find((c) => c.id === id);
   if (!char) return;
 
   const races = getAllRaces();
-  const race = races.find(r => r.factionId === char.factionId && r.raceId === char.raceId);
+  const race = races.find(
+    (r) => r.factionId === char.factionId && r.raceId === char.raceId,
+  );
   if (!race) {
     updateStatus(`Race ${char.factionId}/${char.raceId} not found`);
     return;
@@ -861,9 +1063,11 @@ function loadSavedCharacter(id) {
   currentRaceId = char.raceId;
 
   // Highlight the race button
-  document.querySelectorAll('.faction-btn').forEach(b => {
-    b.classList.toggle('active',
-      b.dataset.faction === char.factionId && b.dataset.race === char.raceId);
+  document.querySelectorAll(".faction-btn").forEach((b) => {
+    b.classList.toggle(
+      "active",
+      b.dataset.faction === char.factionId && b.dataset.race === char.raceId,
+    );
   });
 
   // Restore attributes
@@ -890,7 +1094,7 @@ function loadSavedCharacter(id) {
       buildEquipmentUI(equipMgr.getSlotSummary());
     }
     updateStatus(`Loaded: ${char.name}`);
-    document.getElementById('updateBuildBtn').style.display = '';
+    document.getElementById("updateBuildBtn").style.display = "";
   });
 }
 
@@ -906,90 +1110,155 @@ function getEditorState() {
 
 function setupPersistence() {
   // Save button
-  document.getElementById('saveBuildBtn').addEventListener('click', async () => {
-    if (!currentFactionId || !currentRaceId) {
-      updateStatus('Select a race first');
-      return;
-    }
-    const name = prompt('Character name:', `Character ${characterStore.characters.length + 1}`);
-    if (name === null) return;
+  document
+    .getElementById("saveBuildBtn")
+    .addEventListener("click", async () => {
+      if (!currentFactionId || !currentRaceId) {
+        updateStatus("Select a race first");
+        return;
+      }
+      const name = prompt(
+        "Character name:",
+        `Character ${characterStore.characters.length + 1}`,
+      );
+      if (name === null) return;
 
-    const state = getEditorState();
-    state.name = name;
-    await characterStore.save(state);
-    document.getElementById('updateBuildBtn').style.display = '';
-    updateStatus(`Saved: ${name}`);
-  });
+      const state = getEditorState();
+      state.name = name;
+      await characterStore.save(state);
+      document.getElementById("updateBuildBtn").style.display = "";
+      updateStatus(`Saved: ${name}`);
+      telemetry.track(EVENT_TYPES.CHARACTER_SAVE, {
+        faction_id: state.factionId,
+        race_id: state.raceId,
+        level: state.level,
+        slots: Object.keys(state.equipped || {}).length,
+      });
+    });
 
   // Update button
-  document.getElementById('updateBuildBtn').addEventListener('click', async () => {
-    if (!characterStore.activeId) return;
-    const state = getEditorState();
-    await characterStore.update(state);
-    updateStatus('Build updated');
-  });
+  document
+    .getElementById("updateBuildBtn")
+    .addEventListener("click", async () => {
+      if (!characterStore.activeId) return;
+      const state = getEditorState();
+      await characterStore.update(state);
+      updateStatus("Build updated");
+      telemetry.track(EVENT_TYPES.CHARACTER_UPDATE, {
+        faction_id: state.factionId,
+        race_id: state.raceId,
+        level: state.level,
+        slots: Object.keys(state.equipped || {}).length,
+      });
+    });
 
   // React to store changes
-  characterStore.addEventListener('change', () => buildSavedCharactersList());
-  characterStore.addEventListener('error', (e) => updateStatus(`Error: ${e.detail?.message || 'Unknown'}`));
+  characterStore.addEventListener("change", () => buildSavedCharactersList());
+  characterStore.addEventListener("error", (e) =>
+    updateStatus(`Error: ${e.detail?.message || "Unknown"}`),
+  );
+}
+
+// Returns true when the page is running inside the Puter platform.
+// On puter.com / *.puter.site the SDK is injected by the platform and
+// signIn() resolves instantly. On external hosting we load the SDK ourselves
+// but must NOT auto-popup — only use Puter if already signed in.
+function isOnPuter() {
+  const h = window.location.hostname;
+  return h === "puter.com" || h.endsWith(".puter.site");
+}
+
+// Bridges Puter identity → Grudge JWT.
+// Returns the Grudge user, or null if Puter is unavailable or the user cancels.
+async function bridgePuterAuth() {
+  if (typeof window.puter === "undefined") return null;
+  try {
+    if (!puter.auth.isSignedIn()) {
+      if (isOnPuter()) {
+        await puter.auth.signIn(); // silent/instant on puter.com
+      } else {
+        return null; // skip popup on external hosting
+      }
+    }
+    if (!puter.auth.isSignedIn()) return null;
+    const puterUser = await puter.auth.getUser();
+    if (!puterUser) return null;
+    const puterId = puterUser.uuid || puterUser.username;
+    return await grudgeAuth.loginAsGuest(
+      puterUser.username || "Warlord",
+      puterId,
+    );
+  } catch (err) {
+    console.warn("[Puter bridge] skipped:", err.message);
+    return null;
+  }
 }
 
 async function initPersistence() {
-  const signInBtn = document.getElementById('signInBtn');
-  const discordBtn = document.getElementById('discordSignInBtn');
-  const userDisplay = document.getElementById('userDisplay');
+  const signInBtn = document.getElementById("signInBtn");
+  const discordBtn = document.getElementById("discordSignInBtn");
+  const userDisplay = document.getElementById("userDisplay");
 
   async function onSignedIn(user) {
     try {
-      userDisplay.textContent = user.displayName || user.grudgeId || '';
-      signInBtn.style.display = 'none';
-      if (discordBtn) discordBtn.style.display = 'none';
+      userDisplay.textContent = user.displayName || user.grudgeId || "";
+      signInBtn.style.display = "none";
+      if (discordBtn) discordBtn.style.display = "none";
+      telemetry.setIdentity({ grudgeId: user.grudgeId });
       await characterStore.load();
       buildSavedCharactersList();
-      updateStatus('Signed in as ' + (user.displayName || user.grudgeId));
+      updateStatus("Signed in as " + (user.displayName || user.grudgeId));
     } catch (err) {
-      console.error('Auth load failed:', err);
+      console.error("Auth load failed:", err);
       showOffline();
     }
   }
 
   function showOffline() {
-    signInBtn.style.display = '';
-    if (discordBtn) discordBtn.style.display = '';
-    document.getElementById('savedCharactersList').innerHTML =
+    signInBtn.style.display = "";
+    if (discordBtn) discordBtn.style.display = "";
+    document.getElementById("savedCharactersList").innerHTML =
       '<p style="color:var(--muted);font-size:.8rem;">Sign in to save characters</p>';
   }
 
-  // Guest sign-in button
-  signInBtn.addEventListener('click', async () => {
+  // Guest sign-in button — plain guest (no Puter)
+  signInBtn.addEventListener("click", async () => {
     try {
       const user = await grudgeAuth.loginAsGuest();
       await onSignedIn(user);
     } catch (err) {
-      console.error('Sign-in failed:', err);
-      updateStatus('Sign-in failed: ' + err.message);
+      console.error("Sign-in failed:", err);
+      updateStatus("Sign-in failed: " + err.message);
     }
   });
 
   // Discord sign-in button
   if (discordBtn) {
-    discordBtn.addEventListener('click', () => grudgeAuth.loginWithDiscord());
+    discordBtn.addEventListener("click", () => grudgeAuth.loginWithDiscord());
   }
 
-  // Handle OAuth callback (token in URL from Discord/Google redirect)
+  // 1. OAuth callback — token injected into URL by Discord/Google redirect
   const callbackUser = await grudgeAuth.handleOAuthCallback();
   if (callbackUser) {
     await onSignedIn(callbackUser);
     return;
   }
 
-  // Try to restore existing session
+  // 2. Restore existing session from storage
   const existingUser = await grudgeAuth.init();
   if (existingUser) {
     await onSignedIn(existingUser);
-  } else {
-    showOffline();
+    return;
   }
+
+  // 3. Puter silent bridge — auto-authenticates when running on puter.com
+  const puterUser = await bridgePuterAuth();
+  if (puterUser) {
+    await onSignedIn(puterUser);
+    return;
+  }
+
+  showOffline();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -998,6 +1267,11 @@ async function initPersistence() {
 // Boot sequence — load D1 manifest first, then build UI
 async function boot() {
   initScene();
+
+  // Telemetry — events stream to models.grudge-studio.com → Pipelines → R2
+  const eventsEndpoint =
+    (MANIFEST_API || "https://models.grudge-studio.com") + "/api/events";
+  telemetry.init({ endpoint: eventsEndpoint });
 
   // Fetch D1 manifest (overwrites bundled data if available)
   await loadManifest();
@@ -1014,45 +1288,184 @@ async function boot() {
   buildMasteryPanel();
   setupCombatHotkeys();
   setupPersistence();
+  setupAIChat();
   animate();
-  updateStatus('Ready — select a faction race to load');
+  updateStatus("Ready — select a faction race to load");
   initPersistence();
 }
 boot();
 
 // ════════════════════════════════════════════════════════════
+// AI Chat Assistant
+// ════════════════════════════════════════════════════════════
+function setupAIChat() {
+  const root = document.getElementById("aiChatRoot");
+  if (!root) return;
+  const endpoint =
+    (MANIFEST_API || "https://models.grudge-studio.com") + "/api/ai/chat";
+
+  const chat = new AIChat({
+    endpoint,
+    getContext: () => ({
+      race: currentRaceId ? `${currentFactionId}/${currentRaceId}` : null,
+      equipped: equipMgr ? { ...equipMgr.equipped } : {},
+      attrs: { ...character.attrs },
+      availableRaces: getAllRaces().map(
+        (r) => `${r.factionId}/${r.raceId} (${r.name})`,
+      ),
+      availableSlots: equipMgr
+        ? Object.keys(equipMgr.slots).map((s) => ({
+            slot: s,
+            variants: Object.keys(equipMgr.slots[s] || {}),
+          }))
+        : [],
+    }),
+    handlers: {
+      async setRace(factionId, raceId) {
+        const race = getAllRaces().find(
+          (r) => r.factionId === factionId && r.raceId === raceId,
+        );
+        if (!race) return;
+        currentFactionId = factionId;
+        currentRaceId = raceId;
+        document.querySelectorAll(".faction-btn").forEach((b) => {
+          b.classList.toggle(
+            "active",
+            b.dataset.faction === factionId && b.dataset.race === raceId,
+          );
+        });
+        await loadCharacterModel(race);
+      },
+      async equip(slot, variant) {
+        if (!equipMgr) return;
+        const isWeaponSlot = [
+          "axe",
+          "hammer",
+          "sword",
+          "pick",
+          "spear",
+          "bow",
+          "staff",
+          "shield",
+        ].includes(slot);
+        if (isWeaponSlot) {
+          equipMgr.equipWeapon(slot, variant);
+          if (WEAPON_ANIM_MAP[slot] && weaponCtrl && currentModel && mixer) {
+            await weaponCtrl.equipWeapon(
+              slot,
+              WEAPON_ANIMATION_PACKS,
+              currentModel,
+            );
+          }
+        } else {
+          equipMgr.equip(slot, variant);
+        }
+        buildEquipmentUI(equipMgr.getSlotSummary());
+        telemetry.track(EVENT_TYPES.EQUIPMENT_CHANGE, {
+          faction_id: currentFactionId,
+          race_id: currentRaceId,
+          slot,
+          variant,
+          action: "ai_equip",
+        });
+      },
+      unequip(slot) {
+        if (!equipMgr) return;
+        equipMgr.unequip(slot);
+        if (WEAPON_ANIM_MAP[slot] && weaponCtrl) weaponCtrl.sheathWeapon();
+        buildEquipmentUI(equipMgr.getSlotSummary());
+      },
+      setAttr(key, value) {
+        if (!ATTR_KEYS.includes(key)) return;
+        const v = Math.max(0, Math.min(80, parseInt(value, 10) || 0));
+        character.attrs[key] = v;
+        const slider = document.querySelector(`input[data-attr="${key}"]`);
+        if (slider) slider.value = v;
+        const valEl = document.querySelector(`[data-val="${key}"]`);
+        if (valEl) valEl.textContent = v;
+        recalcStats();
+      },
+      async playAnim(pack, file) {
+        if (pack && file) await loadAnimation(pack, file);
+      },
+      async save(name) {
+        if (!currentFactionId || !currentRaceId) return;
+        const state = getEditorState();
+        state.name =
+          name || `Character ${characterStore.characters.length + 1}`;
+        await characterStore.save(state);
+        document.getElementById("updateBuildBtn").style.display = "";
+        updateStatus(`Saved: ${state.name}`);
+      },
+    },
+  });
+  chat.mount(root);
+  window._aiChat = chat;
+}
+
+// ════════════════════════════════════════════════════════════
 // Combat Hotkeys & Hotbar
 // ════════════════════════════════════════════════════════════
 function setupCombatHotkeys() {
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener("keydown", (e) => {
     if (e.target !== document.body) return;
     if (!weaponCtrl) return;
 
+    const trackCombat = (action) =>
+      telemetry.track(EVENT_TYPES.COMBAT_ACTION, {
+        faction_id: currentFactionId,
+        race_id: currentRaceId,
+        action,
+        weapon: weaponCtrl?.equippedWeaponType || null,
+        mode: weaponCtrl?.mode || null,
+      });
+
     switch (e.code) {
-      case 'Digit1': weaponCtrl.triggerAction('slot1'); break;
-      case 'Digit2': weaponCtrl.triggerAction('slot2'); break;
-      case 'Digit3': weaponCtrl.triggerAction('slot3'); break;
-      case 'Digit4': weaponCtrl.triggerAction('slot4'); break;
-      case 'KeyQ':   weaponCtrl.triggerAction('block'); break;
-      case 'KeyE':   weaponCtrl.triggerAction('dodge'); break;
-      case 'KeyZ':   // Z-key combat mechanic
-        updateStatus('⚡ Battle Cry!');
-        weaponCtrl.triggerAction('slot4');
+      case "Digit1":
+        weaponCtrl.triggerAction("slot1");
+        trackCombat("slot1");
         break;
-      case 'Tab':
+      case "Digit2":
+        weaponCtrl.triggerAction("slot2");
+        trackCombat("slot2");
+        break;
+      case "Digit3":
+        weaponCtrl.triggerAction("slot3");
+        trackCombat("slot3");
+        break;
+      case "Digit4":
+        weaponCtrl.triggerAction("slot4");
+        trackCombat("slot4");
+        break;
+      case "KeyQ":
+        weaponCtrl.triggerAction("block");
+        trackCombat("block");
+        break;
+      case "KeyE":
+        weaponCtrl.triggerAction("dodge");
+        trackCombat("dodge");
+        break;
+      case "KeyZ": // Z-key combat mechanic
+        updateStatus("⚡ Battle Cry!");
+        weaponCtrl.triggerAction("slot4");
+        trackCombat("battle_cry");
+        break;
+      case "Tab":
         e.preventDefault();
         weaponCtrl.toggleMode();
         buildHotbarUI();
+        trackCombat("toggle_mode");
         break;
-      case 'KeyX':
+      case "KeyX":
         weaponCtrl.sheathWeapon();
         buildHotbarUI();
+        trackCombat("sheath");
         break;
     }
   });
 
-  window.addEventListener('keyup', (e) => {
-    if (e.code === 'KeyQ' && weaponCtrl) {
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "KeyQ" && weaponCtrl) {
       weaponCtrl.releaseBlock();
     }
   });
