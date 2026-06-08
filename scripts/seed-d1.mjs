@@ -104,19 +104,6 @@ function sql(query) {
   }
 }
 
-function batchSql(statements) {
-  // Write to temp file and execute as batch
-  const fs = await import('fs');
-  const tmpFile = 'd1/_seed_batch.sql';
-  fs.writeFileSync(tmpFile, statements.join('\n'));
-  const cmd = `npx wrangler d1 execute grudge-models ${flag} --file=${tmpFile}`;
-  try {
-    execSync(cmd, { stdio: 'inherit', encoding: 'utf8' });
-  } catch (err) {
-    console.error('Batch SQL failed');
-  }
-  fs.unlinkSync(tmpFile);
-}
 
 // ── Main ────────────────────────────────────────────────────
 console.log(`\n⚔️  Seeding D1 grudge-models (${isLocal ? 'LOCAL' : 'REMOTE'})...\n`);

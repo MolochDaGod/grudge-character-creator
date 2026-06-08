@@ -17,6 +17,11 @@ Toon_RTS.zip
 # D1 temp files
 d1/_seed_batch.sql
 
+# Stale nested copy
+grudge-character-creator/
+
 # Wrangler
 .wrangler/
 .dev.vars
+.vercel
+.env*.local
