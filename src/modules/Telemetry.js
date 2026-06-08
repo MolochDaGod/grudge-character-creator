@@ -83,10 +83,12 @@ class Telemetry {
       session_id: this.sessionId,
       grudge_id: this.grudgeId || undefined,
     };
-    const payload = (fields.payload && typeof fields.payload === 'object')
-      ? { ...fields.payload } : {};
+    const payload =
+      fields.payload && typeof fields.payload === "object"
+        ? { ...fields.payload }
+        : {};
     for (const [k, v] of Object.entries(fields)) {
-      if (k === 'payload') continue;
+      if (k === "payload") continue;
       if (TOP_LEVEL_KEYS.includes(k)) row[k] = v;
       else payload[k] = v;
     }
@@ -101,8 +103,8 @@ class Telemetry {
     const batch = this.queue.splice(0, MAX_BATCH);
     try {
       await fetch(this.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ events: batch }),
         keepalive: true,
       });
@@ -111,15 +113,24 @@ class Telemetry {
     }
   }
 
-  /** Synchronous best-effort send used on page unload. */
+  /** Synchronous best-effort send used on page unload. Drains queue in MAX_BATCH chunks. */
   _flushBeacon() {
-    if (!this.enabled || !this.endpoint || this.queue.length === 0) return;
-    const batch = this.queue.splice(0, MAX_BATCH);
-    try {
-      const blob = new Blob([JSON.stringify({ events: batch })],
-        { type: 'application/json' });
-      navigator.sendBeacon(this.endpoint, blob);
-    } catch { /* ignore */ }
+    while (this.enabled && this.endpoint && this.queue.length > 0) {
+      const batch = this.queue.splice(0, MAX_BATCH);
+      try {
+        const blob = new Blob([JSON.stringify({ events: batch })], {
+          type: "application/json",
+        });
+        const ok = navigator.sendBeacon(this.endpoint, blob);
+        if (!ok) {
+          this.queue.unshift(...batch);
+          break;
+        }
+      } catch {
+        this.queue.unshift(...batch);
+        break;
+      }
+    }
   }
 
   _scheduleFlush() {
@@ -128,14 +139,14 @@ class Telemetry {
   }
 
   _bindUnload() {
-    if (this._unloadBound || typeof window === 'undefined') return;
+    if (this._unloadBound || typeof window === "undefined") return;
     this._unloadBound = true;
-    window.addEventListener('pagehide', () => {
+    window.addEventListener("pagehide", () => {
       this.track(EVENT_TYPES.SESSION_END);
       this._flushBeacon();
     });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') this._flushBeacon();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") this._flushBeacon();
     });
   }
 }

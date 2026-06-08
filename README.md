@@ -167,7 +167,78 @@ The Cloudflare Worker serves the model manifest from D1 at edge, so the frontend
 | `GET /api/models/:id/equip` | Equipment slots for a model |
 | `GET /api/animations` | All animation packs |
 | `GET /api/weapons` | Weapon model packs |
+| `GET /api/prefab/:uuid` | Resolved character asset bundle (see below) |
 | `GET /health` | Health check |
+
+## Prefab Asset Bundle (`/api/prefab/:uuid`)
+
+Returns a fully-resolved bundle a game can render with no further DB calls.
+The worker maps `equipped` state → exact mesh names, picks the correct
+bone container for each weapon, and selects a single matching animation
+pack with absolute R2 URLs for the key animations.
+
+```jsonc
+{
+  "uuid": "…",
+  "name": "Kael",
+  "model": {
+    "factionId": "crusade",
+    "raceId": "human",
+    "prefix": "WK_",
+    "url": "https://assets.grudge-studio.com/models/characters/human.glb?v=…",
+    "format": "glb",
+    "skeletonType": "bip001",
+    "bones": { "rightHand": "R_hand_container", "leftHand": "L_hand_container", "leftShield": "L_shield_container", "bag": "Bone_bag", "wood": "Bone_wood", "quiver": "Quiver_container" }
+  },
+  "visibleMeshes": ["WK_Units_Body_A", "WK_Units_Arms_B", "WK_Units_Legs_A", "WK_Units_sword_A", "WK_Units_shield_A"],
+  "attachments": [
+    { "slot": "sword",  "variant": "A", "meshName": "WK_Units_sword_A",  "bone": "R_hand_container" },
+    { "slot": "shield", "variant": "A", "meshName": "WK_Units_shield_A", "bone": "L_shield_container" }
+  ],
+  "animationPack": {
+    "key": "pro_sword_shield",
+    "name": "1H Sword + Shield",
+    "baseUrl": "https://assets.grudge-studio.com/anims/pro_sword_shield/",
+    "files": ["sword and shield idle.fbx", "…"],
+    "specials": {
+      "idle":   "https://assets.grudge-studio.com/anims/pro_sword_shield/sword and shield idle.fbx",
+      "draw":   "https://assets.grudge-studio.com/anims/pro_sword_shield/draw sword 1.fbx",
+      "sheath": "https://assets.grudge-studio.com/anims/pro_sword_shield/sheath sword 1.fbx"
+    },
+    "weaponSlot": "sword",
+    "bone": "R_hand_container"
+  },
+  "equipment": { "equipped": { … }, "slots": [ … ] },
+  "stats": { "attrs": { … }, "level": 1 },
+  "version": "1.1.0"
+}
+```
+
+Minimal Three.js consumer:
+
+```js
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const p = await fetch(`https://models.grudge-studio.com/api/prefab/${uuid}`).then(r => r.json());
+const gltf = await new GLTFLoader().loadAsync(p.model.url);
+const root = gltf.scene;
+
+const visible = new Set(p.visibleMeshes);
+const meshes = new Map();
+root.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) meshes.set(o.name, o); });
+for (const [name, m] of meshes) m.visible = visible.has(name);
+
+const bones = new Map();
+root.traverse((o) => { if (o.isBone) bones.set(o.name, o); });
+for (const a of p.attachments) {
+  const mesh = meshes.get(a.meshName);
+  const bone = bones.get(a.bone);
+  if (mesh && bone) bone.add(mesh);
+}
+
+scene.add(root);
+// then load p.animationPack.specials.idle into an AnimationMixer
+```
 
 ## Equipment Slot Architecture
 

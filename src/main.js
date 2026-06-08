@@ -83,7 +83,13 @@ function initScene() {
     antialias: true,
     powerPreference: "high-performance",
   });
-  renderer.setSize(container.clientWidth, container.clientHeight);
+  // updateStyle=false lets the CSS rule `#viewport canvas { width:100%;height:100% }`
+  // control the display size; we only manage the WebGL drawing buffer.
+  renderer.setSize(
+    container.clientWidth || 1,
+    container.clientHeight || 1,
+    false,
+  );
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -142,13 +148,24 @@ function initScene() {
   grid.position.y = 0.01;
   scene.add(grid);
 
-  // Resize
-  window.addEventListener("resize", () => {
-    camera.aspect = container.clientWidth / container.clientHeight;
+  // Resize — observe the viewport container directly so the canvas tracks
+  // grid/flex layout changes (panels collapsing, font load reflow, etc.),
+  // not just window resize.
+  const handleResize = () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if (w === 0 || h === 0) return;
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    if (postfx) postfx.resize(container.clientWidth, container.clientHeight);
-  });
+    renderer.setSize(w, h, false);
+    if (postfx) postfx.resize(w, h);
+  };
+  window.addEventListener("resize", handleResize);
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(handleResize).observe(container);
+  }
+  // Defer one frame so initial grid layout is committed before first sizing.
+  requestAnimationFrame(handleResize);
 
   // Init post-processing pipeline
   postfx = new PostFX(renderer, scene, camera);

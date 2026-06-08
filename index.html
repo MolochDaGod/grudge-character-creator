@@ -7,14 +7,17 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/grudge-icon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/grudge-icon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon/grudge-icon-180x180.png">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <style>
     :root {
-      --bg: #0b1020; --card: #141a2b; --text: #e8eaf6; --muted: #a5b4d0;
-      --border: #2a3150; --accent: #6ee7b7; --danger: #ef4444;
+      --bg: #0b1120; --card: #111a2e; --text: #e6ebf5; --muted: #8a93a8;
+      --border: #232b3a; --accent: #f59e0b; --accent-rgb: 245, 158, 11;
+      --gold: #e3a73f; --ember: #f0801a; --indigo: #6b6ad8; --danger: #ef4444;
+      --radius: .375rem;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
     #app { display: grid; grid-template-columns: 260px 1fr 300px; grid-template-rows: 50px 1fr; height: 100vh; }
 
     /* Header */
@@ -37,7 +40,7 @@
       border-radius: 6px; background: rgba(0,0,0,.2); color: var(--text); cursor: pointer;
       font-size: .85rem; text-align: left; transition: all .2s; display: flex; align-items: center; gap: 8px; }
     .faction-btn:hover { border-color: var(--accent); }
-    .faction-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .faction-btn.active { border-color: var(--accent); background: rgba(var(--accent-rgb),.1); }
     .faction-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
     .slot-group { margin-bottom: 12px; }
@@ -47,7 +50,7 @@
     .slot-btn { padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px;
       background: rgba(0,0,0,.3); color: var(--text); cursor: pointer; font-size: .75rem; transition: all .15s; }
     .slot-btn:hover { border-color: var(--accent); }
-    .slot-btn.equipped { background: rgba(110,231,183,.2); border-color: var(--accent); color: var(--accent); }
+    .slot-btn.equipped { background: rgba(var(--accent-rgb),.2); border-color: var(--accent); color: var(--accent); }
 
     /* Center — 3D Viewport */
     #viewport { position: relative; background: #000; }
@@ -75,7 +78,7 @@
       background: rgba(0,0,0,.25); border-radius: 4px; font-size: .72rem; border-left: 2px solid transparent; }
     .stat-item .label { color: var(--muted); white-space: nowrap; }
     .stat-item .value { color: var(--accent); font-family: monospace; font-weight: 600; min-width: 40px; text-align: right; }
-    .stat-item:hover { border-left-color: var(--accent); background: rgba(110,231,183,.05); }
+    .stat-item:hover { border-left-color: var(--accent); background: rgba(var(--accent-rgb),.05); }
     .stat-item--offense { border-left-color: #ef444440; }
     .stat-item--defense { border-left-color: #3b82f640; }
     .stat-item--regen { border-left-color: #22c55e40; }
@@ -93,12 +96,12 @@
       background: rgba(0,0,0,.3); color: var(--text); font-size: .8rem; cursor: pointer; }
     select { width: 100%; margin-bottom: 6px; }
     button.action-btn { margin: 2px; transition: all .2s; }
-    button.action-btn:hover { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    button.action-btn:hover { border-color: var(--accent); background: rgba(var(--accent-rgb),.1); }
     .anim-list { max-height: 120px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 3px; }
     .anim-btn { padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px;
       background: rgba(0,0,0,.2); color: var(--muted); cursor: pointer; font-size: .7rem; transition: all .15s; }
     .anim-btn:hover { color: var(--accent); border-color: var(--accent); }
-    .anim-btn.playing { color: var(--accent); border-color: var(--accent); background: rgba(110,231,183,.15); }
+    .anim-btn.playing { color: var(--accent); border-color: var(--accent); background: rgba(var(--accent-rgb),.15); }
 
     .combat-log { font-family: monospace; font-size: .65rem; color: var(--muted); max-height: 80px;
       overflow-y: auto; background: rgba(0,0,0,.3); border-radius: 4px; padding: 6px; margin-top: 6px; }
@@ -110,7 +113,7 @@
       border: 1px solid var(--border); border-radius: 6px; background: rgba(0,0,0,.2);
       cursor: pointer; transition: all .2s; font-size: .8rem; }
     .saved-char:hover { border-color: var(--accent); }
-    .saved-char.active { border-color: var(--accent); background: rgba(110,231,183,.1); }
+    .saved-char.active { border-color: var(--accent); background: rgba(var(--accent-rgb),.1); }
     .saved-char .char-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .saved-char .char-race { color: var(--muted); font-size: .7rem; }
     .saved-char .char-delete { color: var(--danger); cursor: pointer; font-size: .7rem;
@@ -122,8 +125,8 @@
     .tab-btn { padding: 5px 8px; border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0;
       background: transparent; color: var(--muted); cursor: pointer; font-size: .65rem; transition: all .2s;
       font-family: 'Cinzel', serif; white-space: nowrap; }
-    .tab-btn:hover { color: var(--text); background: rgba(110,231,183,.05); }
-    .tab-btn.active { color: var(--accent); background: rgba(110,231,183,.1); border-color: var(--border); }
+    .tab-btn:hover { color: var(--text); background: rgba(var(--accent-rgb),.05); }
+    .tab-btn.active { color: var(--accent); background: rgba(var(--accent-rgb),.1); border-color: var(--border); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
@@ -131,7 +134,7 @@
     .class-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px;
       background: rgba(0,0,0,.2); cursor: pointer; transition: all .2s; }
     .class-card:hover { border-color: var(--accent); }
-    .class-card.selected { border-color: var(--accent); background: rgba(110,231,183,.08); }
+    .class-card.selected { border-color: var(--accent); background: rgba(var(--accent-rgb),.08); }
     .class-card .class-header { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; }
     .class-card .class-desc { font-size: .7rem; color: var(--muted); margin-top: 4px; }
 
@@ -141,7 +144,7 @@
       background: rgba(0,0,0,.3); border-radius: 4px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
     .skill-node { display: flex; align-items: center; gap: 6px; padding: 4px 8px; margin-bottom: 2px;
       border-left: 2px solid var(--border); font-size: .7rem; transition: all .15s; }
-    .skill-node:hover { border-left-color: var(--accent); background: rgba(110,231,183,.03); }
+    .skill-node:hover { border-left-color: var(--accent); background: rgba(var(--accent-rgb),.03); }
     .skill-node .skill-lvl { font-size: .6rem; color: var(--muted); min-width: 28px; font-family: monospace; }
     .skill-node .skill-name { color: var(--text); flex: 1; }
     .skill-node .skill-cost { font-size: .6rem; color: var(--accent); font-family: monospace; }
@@ -178,12 +181,12 @@
       background: rgba(0,0,0,.2); cursor: pointer; font-size: .6rem; text-align: center;
       transition: all .15s; color: var(--muted); }
     .wep-type-btn:hover { border-color: var(--accent); color: var(--text); }
-    .wep-type-btn.active { border-color: var(--accent); background: rgba(110,231,183,.1); color: var(--accent); }
+    .wep-type-btn.active { border-color: var(--accent); background: rgba(var(--accent-rgb),.1); color: var(--accent); }
 
     /* ── Forge tree styles ──────────────────────────────────────────────── */
     .forge-node { display: flex; align-items: center; gap: 4px; padding: 2px 4px;
       border-bottom: 1px solid rgba(42,49,80,.3); cursor: default; font-size: .65rem; }
-    .forge-node:hover { background: rgba(110,231,183,.05); }
+    .forge-node:hover { background: rgba(var(--accent-rgb),.05); }
     .forge-node.forge-hidden { opacity: .4; }
     .forge-toggle { cursor: pointer; font-size: .6rem; min-width: 12px; user-select: none; }
     .forge-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
@@ -192,7 +195,7 @@
     .forge-mat { font-size: .55rem; color: #8b5cf6; }
     .forge-vis, .forge-focus { background: none; border: none; cursor: pointer; font-size: .6rem;
       padding: 1px 3px; border-radius: 2px; margin-left: auto; }
-    .forge-vis:hover, .forge-focus:hover { background: rgba(110,231,183,.15); }
+    .forge-vis:hover, .forge-focus:hover { background: rgba(var(--accent-rgb),.15); }
 
     /* ── Mobile toggle button (hidden on desktop) ─────────────────────── */
     .mobile-toggle { display: none; }
@@ -240,7 +243,7 @@
         color: var(--accent);
         cursor: pointer;
         font-size: .8rem;
-        font-family: 'Jost', sans-serif;
+        font-family: 'Inter', system-ui, sans-serif;
       }
       .mobile-toggle:hover { border-color: var(--accent); }
 
@@ -434,7 +437,8 @@
   </div>
 </div>
 
-<script src="https://js.puter.com/v2/"></script>
+<!-- Puter SDK is served from a versionless URL that updates dynamically, so a static SRI hash is not viable. crossorigin="anonymous" is set to minimize the third-party surface; if stricter integrity is required, vendor a pinned copy into /public and serve locally. -->
+<script src="https://js.puter.com/v2/" crossorigin="anonymous"></script>
 <script>
   // Mobile panel toggles — only functional at ≤768px (buttons hidden on desktop via CSS)
   document.getElementById('toggleLeftPanel').addEventListener('click', () => {

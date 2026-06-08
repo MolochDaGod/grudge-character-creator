@@ -4,6 +4,9 @@
   "private": true,
   "description": "Grudge Studio — Modular 3D Race Character Creator with Grudge UUID, R2, and D1",
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
