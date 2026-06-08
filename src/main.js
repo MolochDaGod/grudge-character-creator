@@ -1,31 +1,55 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { SkeletonHelper } from 'three';
-import { loadModel, loadModelFromFile, loadAnimationClips, prepareModel, fbxLoader, initKTX2, SUPPORTED_EXTENSIONS } from './modules/SmartLoader.js';
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import {
+  loadModel,
+  loadModelFromFile,
+  loadAnimationClips,
+  prepareModel,
+  fbxLoader,
+  initKTX2,
+  SUPPORTED_EXTENSIONS,
+} from "./modules/SmartLoader.js";
 
-import { EquipmentManager } from './modules/EquipmentManager.js';
-import { getAllRaces, WEAPON_ANIMATION_PACKS, loadManifest, getAnimationPacks } from './modules/FactionRegistry.js';
+import { EquipmentManager } from "./modules/EquipmentManager.js";
 import {
-  ATTRIBUTES, ATTR_KEYS, MAX_POINTS,
-  calculateDerivedStats, simulateCombat, createDefaultCharacter
-} from './modules/StatsEngine.js';
-import { grudgeAuth } from './modules/GrudgeAuth.js';
-import { characterStore } from './modules/CharacterStore.js';
+  getAllRaces,
+  WEAPON_ANIMATION_PACKS,
+  loadManifest,
+  getAnimationPacks,
+} from "./modules/FactionRegistry.js";
 import {
-  CLASSES, CLASS_SKILLS, PROFESSIONS, WORGE_FORMS, MAGIC_VFX,
-  WEAPON_TYPES, WEAPON_SKILLS, MASTERY_TIERS, getMasteryProgress,
-  WEAPON_ANIM_MAP, COMBAT_ACTIONS,
-} from './modules/GameData.js';
-import { WeaponAnimController } from './modules/WeaponAnimController.js';
+  ATTRIBUTES,
+  ATTR_KEYS,
+  MAX_POINTS,
+  calculateDerivedStats,
+  simulateCombat,
+  createDefaultCharacter,
+} from "./modules/StatsEngine.js";
+import { grudgeAuth } from "./modules/GrudgeAuth.js";
+import { characterStore } from "./modules/CharacterStore.js";
+import {
+  CLASSES,
+  CLASS_SKILLS,
+  PROFESSIONS,
+  WORGE_FORMS,
+  MAGIC_VFX,
+  WEAPON_TYPES,
+  WEAPON_SKILLS,
+  MASTERY_TIERS,
+  getMasteryProgress,
+  WEAPON_ANIM_MAP,
+  COMBAT_ACTIONS,
+} from "./modules/GameData.js";
+import { WeaponAnimController } from "./modules/WeaponAnimController.js";
 
 // ── New modules from threejs-skills integration ──
-import { assetCache } from './modules/AssetCache.js';
-import { PostFX } from './modules/PostFX.js';
-import { BoneAttachment } from './modules/BoneAttachment.js';
-import { BossFight } from './modules/BossFight.js';
-import { VFXManager } from './modules/VFXManager.js';
-import { ForgePanel } from './modules/ForgePanel.js';
-import { resolveTextures, classifyStyle } from './modules/TextureResolver.js';
+import { assetCache } from "./modules/AssetCache.js";
+import { PostFX } from "./modules/PostFX.js";
+import { BoneAttachment } from "./modules/BoneAttachment.js";
+import { BossFight } from "./modules/BossFight.js";
+import { VFXManager } from "./modules/VFXManager.js";
+import { ForgePanel } from "./modules/ForgePanel.js";
+import { resolveTextures, classifyStyle } from "./modules/TextureResolver.js";
 import { telemetry, EVENT_TYPES } from "./modules/Telemetry.js";
 import { MANIFEST_API } from "./modules/AssetConfig.js";
 import { AIChat } from "./modules/AIChat.js";
@@ -702,7 +726,7 @@ function setupAdminPanel() {
         if (c.isSkinnedMesh && !skeleton) skeleton = c;
       });
       if (skeleton) {
-        skeletonHelper = new SkeletonHelper(currentModel);
+        skeletonHelper = new THREE.SkeletonHelper(currentModel);
         scene.add(skeletonHelper);
       }
     }
@@ -788,8 +812,9 @@ function updateStatus(msg) {
 // ════════════════════════════════════════════════════════════
 // Render Loop
 // ════════════════════════════════════════════════════════════
+// Driven by renderer.setAnimationLoop() — modern Three.js pattern.
+// Auto-pauses on tab hide, WebXR-safe, no manual rAF chain.
 function animate() {
-  requestAnimationFrame(animate);
   const dt = clock.getDelta();
   controls.update();
   if (mixer) mixer.update(dt);
@@ -1306,7 +1331,7 @@ async function boot() {
   setupCombatHotkeys();
   setupPersistence();
   setupAIChat();
-  animate();
+  renderer.setAnimationLoop(animate);
   updateStatus("Ready — select a faction race to load");
   initPersistence();
 }
@@ -1489,20 +1514,26 @@ function setupCombatHotkeys() {
 }
 
 function buildHotbarUI() {
-  const container = document.getElementById('hotbarDisplay');
+  const container = document.getElementById("hotbarDisplay");
   if (!container) return;
 
   if (!weaponCtrl || !weaponCtrl.equippedWeaponType) {
-    container.innerHTML = '<p style="color:var(--muted);font-size:.7rem;">Equip a weapon to see hotbar</p>';
+    container.innerHTML =
+      '<p style="color:var(--muted);font-size:.7rem;">Equip a weapon to see hotbar</p>';
     return;
   }
 
   const hotbar = weaponCtrl.getHotbar();
-  if (!hotbar) { container.innerHTML = ''; return; }
+  if (!hotbar) {
+    container.innerHTML = "";
+    return;
+  }
 
-  const modeLabel = weaponCtrl.mode === 'combat' ? '⚔️ Combat' : '🪨 Harvest';
+  const modeLabel = weaponCtrl.mode === "combat" ? "⚔️ Combat" : "🪨 Harvest";
   const stateLabel = weaponCtrl.state;
-  const wpnName = WEAPON_TYPES[weaponCtrl.equippedWeaponType]?.name || weaponCtrl.equippedWeaponType;
+  const wpnName =
+    WEAPON_TYPES[weaponCtrl.equippedWeaponType]?.name ||
+    weaponCtrl.equippedWeaponType;
 
   container.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
@@ -1511,17 +1542,19 @@ function buildHotbarUI() {
       <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">Tab=mode X=sheath</span>
     </div>
     <div style="display:flex;gap:3px;">
-      ${['slot1','slot2','slot3','slot4'].map((key, i) => {
-        const a = hotbar[key];
-        return `<button class="action-btn" onclick="window._wc?.triggerAction('${key}')" style="flex:1;font-size:.65rem;" title="Key ${i+1}">
-          <b>${i+1}</b> ${a?.name || '—'}
+      ${["slot1", "slot2", "slot3", "slot4"]
+        .map((key, i) => {
+          const a = hotbar[key];
+          return `<button class="action-btn" onclick="window._wc?.triggerAction('${key}')" style="flex:1;font-size:.65rem;" title="Key ${i + 1}">
+          <b>${i + 1}</b> ${a?.name || "—"}
         </button>`;
-      }).join('')}
+        })
+        .join("")}
       <button class="action-btn" onclick="window._wc?.triggerAction('block')" style="font-size:.65rem;" title="Hold Q">
-        Q ${hotbar.block?.name || 'Block'}
+        Q ${hotbar.block?.name || "Block"}
       </button>
       <button class="action-btn" onclick="window._wc?.triggerAction('dodge')" style="font-size:.65rem;" title="E">
-        E ${hotbar.dodge?.name || 'Dodge'}
+        E ${hotbar.dodge?.name || "Dodge"}
       </button>
     </div>
   `;

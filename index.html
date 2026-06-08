@@ -18,7 +18,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
-    #app { display: grid; grid-template-columns: 260px 1fr 300px; grid-template-rows: 50px 1fr; height: 100vh; }
+    #app { display: grid; grid-template-columns: 280px 1fr 280px; grid-template-rows: 50px 1fr; height: 100vh; }
 
     /* Header */
     header { grid-column: 1/-1; background: linear-gradient(135deg, rgba(14,22,48,.9), rgba(20,26,43,.7));
@@ -52,9 +52,9 @@
     .slot-btn:hover { border-color: var(--accent); }
     .slot-btn.equipped { background: rgba(var(--accent-rgb),.2); border-color: var(--accent); color: var(--accent); }
 
-    /* Center — 3D Viewport */
-    #viewport { position: relative; background: #000; }
-    #viewport canvas { display: block; width: 100%; height: 100%; }
+    /* Center — 3D Viewport (canvas absolutely fills the grid cell; renderer owns its sizing) */
+    #viewport { position: relative; background: #000; min-width: 0; min-height: 0; overflow: hidden; }
+    #viewport canvas { position: absolute; inset: 0; display: block; width: 100% !important; height: 100% !important; }
     #loadingOverlay { position: absolute; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; background: rgba(11,16,32,.9); z-index: 10; }
     #loadingOverlay.hidden { display: none; }
