@@ -1,0 +1,13 @@
+{
+  "fields": [
+    { "name": "event_type", "type": "string", "required": true },
+    { "name": "ts",         "type": "timestamp", "required": true },
+    { "name": "session_id", "type": "string", "required": false },
+    { "name": "grudge_id",  "type": "string", "required": false },
+    { "name": "faction_id", "type": "string", "required": false },
+    { "name": "race_id",    "type": "string", "required": false },
+    { "name": "slot",       "type": "string", "required": false },
+    { "name": "variant",    "type": "string", "required": false },
+    { "name": "payload",    "type": "json",   "required": false }
+  ]
+}

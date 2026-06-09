@@ -1,0 +1,28 @@
+# Grudge Character Creator — Cloudflare Worker config
+# Serves model manifest from D1 at models.grudge-studio.com
+
+name = "grudge-models-worker"
+main = "worker/index.js"
+compatibility_date = "2024-12-01"
+
+# Custom domain — wrangler auto-creates DNS record on deploy
+routes = [
+  { pattern = "models.grudge-studio.com/*", zone_name = "grudge-studio.com" }
+]
+
+# D1 database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "grudge-models"
+database_id = "2f836a43-153d-4502-8ff0-75a01c15ecb9"
+
+# R2 bucket binding (optional — for direct upload from Worker)
+# [[r2_buckets]]
+# binding = "ASSETS"
+# bucket_name = "grudge-assets"
+
+# Pipelines binding — writes events to grudge_events stream
+# Stream → grudge_events_sink → r2://grudge-events (parquet+zstd, partitioned by date)
+[[pipelines]]
+binding = "GRUDGE_EVENTS_STREAM"
+pipeline = "074935299dc44ef089b448fdf065768f"
