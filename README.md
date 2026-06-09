@@ -1,15 +1,17 @@
 # Grudge Character Creator
 
-Modular 3D race character editor with equipment toggling, stat allocation, combat simulation, and persistent saves. Built for [Grudge Studio](https://grudge-studio.com) by Racalvin The Pirate King.
+Modular 3D race character editor with equipment toggling, bone weapon attachment, stat allocation, combat simulation, and persistent saves. Built for [Grudge Studio](https://grudge-studio.com) by Racalvin The Pirate King.
 
-**Live:** [playground-teal-zeta.vercel.app](https://playground-teal-zeta.vercel.app)  
-**Manifest API:** [grudge-models-worker.grudge.workers.dev](https://grudge-models-worker.grudge.workers.dev/health)
+**Live:** [grudge-character-creator.vercel.app](https://grudge-character-creator.vercel.app)  
+**Manifest API:** [models.grudge-studio.com](https://models.grudge-studio.com/health) (v2.0.0)
 
 ## Features
 
 - **6 Faction Races** — Human (WK_), Barbarian (BRB_), Elf (ELF_), Dwarf (DWF_), Orc (ORC_), Undead (UD_)
 - **42 Equipment Slots Per Race** — Armor (body×5, arms×4, legs×3, head×9, shoulders×2), weapons, shields, utility
 - **Equipment Resolution** — D1 manifest maps equipment state → mesh names → R2 GLB URLs, identical to the Unity game
+- **Bone Weapon Editor** — Attach any weapon FBX/GLB to any bone with live transform sliders, quick-equip presets for 22 weapon types (sword, pistol, rifle, crossbow, dual wield, etc.), save configs to D1
+- **15 Weapon Model Packs** — Swords, Axes, Daggers, Hammers, Staffs, Bows, Crossbows, Shields, Fantasy, Medieval (340+ weapons)
 - **8-Attribute Stats** — STR/DEX/INT/VIT/WIS/LCK/CHA/END with diminishing returns and 37 derived stats
 - **14 Animation Packs** — 1H Sword+Shield, 2H Melee, Longbow, Magic, Great Sword, Rifle, and 8 more
 - **Combat Simulation** — 8-step pipeline with crit, block, dodge, reflect, absorb
@@ -19,36 +21,23 @@ Modular 3D race character editor with equipment toggling, stat allocation, comba
 ## Architecture
 
 ```
-┌─────────────┐      ┌────────────────────────────────────┐      ┌─────────────────┐
-│   Vercel    │─────▷│  Cloudflare Worker                 │      │   Cloudflare R2 │
-│  (Frontend) │      │  models.grudge-studio.com          │      │  assets.grudge- │
-│  Vite SPA   │      │  /api/manifest → D1 query          │      │  studio.com     │
-└──────┬──────┘      │  /api/events   → Pipelines stream  │      └────────┬────────┘
-       │             └─────────────┬──────────────────────┘               │
-       │                           │                                       │
-       │  Equipment state          ▼ env.GRUDGE_EVENTS_STREAM.send()       │
-       │                  ┌───────────────────────────┐                    │
-       │                  │  grudge_events pipeline   │                    │
-       │                  │   stream → SQL → sink     │                    │
-       │                  └─────────────┬─────────────┘                    │
-       │                                ▼                                  │
-       │                  ┌───────────────────────────┐    GLB models      │
-       │                  │  r2://grudge-events       │    served via      │
-       │                  │  parquet+zstd, partitioned│    CDN URL         │
-       │                  └───────────────────────────┘                    │
-       │         ▼                                                         │
-       │  EquipmentManager.js                                              │
-       │  toggles child mesh visibility                                    │
-       │  by name (e.g. WK_Units_Body_A)  ◁────────────────────────────────┘
+┌─────────────┐      ┌──────────────────────────────┐      ┌─────────────────┐
+│   Vercel    │─────▷│  Cloudflare Worker (D1 API)  │      │   Cloudflare R2  │
+│  (Frontend) │      │  models.grudge-studio.com     │      │  assets.grudge-  │
+│  Vite SPA   │      │  /api/manifest → D1 query    │      │  studio.com      │
+│             │      │  /api/weapon-attachments CRUD │      │                  │
+└──────┬──────┘      └──────────────────────────────┘      └────────┬────────┘
+       │                                                            │
+       │  Equipment state + bone attachments             GLB/FBX    │
+       │  (faction + race + slot + variant)               models    │
+       │         │                                     served via   │
+       │         ▼                                     CDN URL      │
+       │  EquipmentManager.js + BoneWeaponEditor.js         │
+       │  mesh toggle + weapon-to-bone attachment  ◁────────┘
        │
        └──────▷ api.grudge-studio.com
                 (Grudge backend — auth + character CRUD)
 ```
-
-Two services live behind a single Worker (`models.grudge-studio.com`):
-
-1. **Manifest API** — read-only D1 queries that tell the SPA which meshes exist for each race.
-2. **Events ingest** — batched POSTs from the SPA forwarded to the `grudge_events` Cloudflare Pipelines stream, which lands them in R2 as Parquet for downstream analytics.
 
 ## Quick Start (Local Dev)
 
@@ -62,38 +51,43 @@ Runs at `http://localhost:3000`. FBX models are served from the parent directory
 ## Project Structure
 
 ```
-playground/
+grudge-character-creator/
 ├── d1/                    # Cloudflare D1 schema + seed data
-│   ├── schema.sql         # Tables: models, equipment_slots, animation_packs, weapon_model_packs
-│   └── seed.sql           # Generated: 6 models, 252 equipment slots, 14 animation packs
+│   ├── schema.sql         # Tables: models, equipment_slots, animation_packs,
+│   │                      #   weapon_model_packs, weapon_bone_attachments
+│   └── seed.sql           # Generated: 6 models, 252 equipment slots, 14 anim packs,
+│                           #   15 weapon model packs, 19 bone attachment presets
 ├── worker/
-│   └── index.js           # Cloudflare Worker — D1 manifest API
+│   └── index.js           # Cloudflare Worker — D1 manifest + weapon attachment CRUD
 ├── scripts/
 │   ├── convert-models.mjs # FBX → GLB pipeline (preserves mesh hierarchy)
 │   ├── upload-r2.mjs      # Upload GLBs to R2 CDN
-│   └── gen-seed-sql.mjs   # Generate d1/seed.sql from faction data
+│   ├── gen-seed-sql.mjs   # Generate d1/seed.sql (models + equip + anims + weapons + presets)
+│   └── seed-d1.mjs        # Direct D1 seeder via wrangler CLI
 ├── src/
 │   ├── main.js            # App entry — scene, UI, boot sequence
 │   └── modules/
 │       ├── AssetConfig.js      # R2 URL builder (VITE_R2_BASE_URL)
+│       ├── ApiClient.js        # Puter auth + D1 bone attachment CRUD
 │       ├── GrudgeAuth.js       # Grudge backend auth (guest + Discord + Google)
 │       ├── CharacterStore.js   # Character CRUD via GrudgeAuth
 │       ├── EquipmentManager.js # Prefix-based mesh toggle (WK_Units_Body_A)
 │       ├── FactionRegistry.js  # Fetches D1 manifest, falls back to bundled data
-│       ├── SmartLoader.js      # Auto-detect FBX/GLTF loader
+│       ├── SmartLoader.js      # Auto-detect FBX/GLTF/OBJ/DAE/STL/USDZ loader
 │       ├── StatsEngine.js      # 8 attrs → 37 derived stats + combat sim
-│       ├── GameData.js         # Classes, skills, professions, weapon types
-│       ├── WeaponAnimController.js # Weapon ↔ animation pack binding
-│       ├── BoneAttachment.js   # Attach weapons to bone containers
+│       ├── GameData.js         # Classes, skills, professions, 17 weapon types
+│       ├── WeaponLibrary.js    # 22 weapon-type → bone presets (pos/rot/scale)
+│       ├── BoneWeaponEditor.js # UI: quick equip, bone picker, transform sliders, D1 save
+│       ├── BoneAttachment.js   # Skeleton-aware weapon attach/detach with alias system
+│       ├── WeaponAnimController.js # Weapon ↔ animation pack binding + combat FSM
+│       ├── ForgePanel.js       # Drag-drop model inspector with hierarchy tree
 │       ├── PostFX.js           # Bloom, tone mapping post-processing
 │       ├── VFXManager.js       # Particle effects
 │       ├── BossFight.js        # Boss arena mode
-│       ├── AssetCache.js       # Asset preloading
-│       └── Telemetry.js        # Event batcher → /api/events → Pipelines → R2
-├── d1/pipelines/
-│   └── grudge-events.schema.json # Source-of-truth schema for the events stream
-├── wrangler.toml          # Cloudflare Worker + D1 + Pipelines config
-├── vercel.json            # Vercel deployment config
+│       ├── TextureResolver.js  # Auto-resolve toon/PBR textures
+│       └── AssetCache.js       # Asset preloading
+├── wrangler.toml          # Cloudflare Worker + D1 config
+├── vercel.json            # Vercel deployment + API rewrites
 ├── vite.config.js         # Vite + local asset serving plugin
 ├── server.js              # Express server for local production testing
 └── index.html             # Single-page app shell
@@ -157,88 +151,21 @@ npx vercel --prod
 
 ## D1 Manifest API
 
-The Cloudflare Worker serves the model manifest from D1 at edge, so the frontend knows which meshes to toggle for each equipment combination.
+The Cloudflare Worker at `models.grudge-studio.com` serves the model manifest and weapon attachment CRUD from D1 at edge.
 
-| Endpoint | Description |
-|---|---|
-| `GET /api/manifest` | Full manifest (factions + equipment + animations) |
-| `GET /api/models` | All 6 race models |
-| `GET /api/models/:id` | Single model with equipment slots |
-| `GET /api/models/:id/equip` | Equipment slots for a model |
-| `GET /api/animations` | All animation packs |
-| `GET /api/weapons` | Weapon model packs |
-| `GET /api/prefab/:uuid` | Resolved character asset bundle (see below) |
-| `GET /health` | Health check |
-
-## Prefab Asset Bundle (`/api/prefab/:uuid`)
-
-Returns a fully-resolved bundle a game can render with no further DB calls.
-The worker maps `equipped` state → exact mesh names, picks the correct
-bone container for each weapon, and selects a single matching animation
-pack with absolute R2 URLs for the key animations.
-
-```jsonc
-{
-  "uuid": "…",
-  "name": "Kael",
-  "model": {
-    "factionId": "crusade",
-    "raceId": "human",
-    "prefix": "WK_",
-    "url": "https://assets.grudge-studio.com/models/characters/human.glb?v=…",
-    "format": "glb",
-    "skeletonType": "bip001",
-    "bones": { "rightHand": "R_hand_container", "leftHand": "L_hand_container", "leftShield": "L_shield_container", "bag": "Bone_bag", "wood": "Bone_wood", "quiver": "Quiver_container" }
-  },
-  "visibleMeshes": ["WK_Units_Body_A", "WK_Units_Arms_B", "WK_Units_Legs_A", "WK_Units_sword_A", "WK_Units_shield_A"],
-  "attachments": [
-    { "slot": "sword",  "variant": "A", "meshName": "WK_Units_sword_A",  "bone": "R_hand_container" },
-    { "slot": "shield", "variant": "A", "meshName": "WK_Units_shield_A", "bone": "L_shield_container" }
-  ],
-  "animationPack": {
-    "key": "pro_sword_shield",
-    "name": "1H Sword + Shield",
-    "baseUrl": "https://assets.grudge-studio.com/anims/pro_sword_shield/",
-    "files": ["sword and shield idle.fbx", "…"],
-    "specials": {
-      "idle":   "https://assets.grudge-studio.com/anims/pro_sword_shield/sword and shield idle.fbx",
-      "draw":   "https://assets.grudge-studio.com/anims/pro_sword_shield/draw sword 1.fbx",
-      "sheath": "https://assets.grudge-studio.com/anims/pro_sword_shield/sheath sword 1.fbx"
-    },
-    "weaponSlot": "sword",
-    "bone": "R_hand_container"
-  },
-  "equipment": { "equipped": { … }, "slots": [ … ] },
-  "stats": { "attrs": { … }, "level": 1 },
-  "version": "1.1.0"
-}
-```
-
-Minimal Three.js consumer:
-
-```js
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-
-const p = await fetch(`https://models.grudge-studio.com/api/prefab/${uuid}`).then(r => r.json());
-const gltf = await new GLTFLoader().loadAsync(p.model.url);
-const root = gltf.scene;
-
-const visible = new Set(p.visibleMeshes);
-const meshes = new Map();
-root.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) meshes.set(o.name, o); });
-for (const [name, m] of meshes) m.visible = visible.has(name);
-
-const bones = new Map();
-root.traverse((o) => { if (o.isBone) bones.set(o.name, o); });
-for (const a of p.attachments) {
-  const mesh = meshes.get(a.meshName);
-  const bone = bones.get(a.bone);
-  if (mesh && bone) bone.add(mesh);
-}
-
-scene.add(root);
-// then load p.animationPack.specials.idle into an AnimationMixer
-```
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/manifest` | GET | Full manifest (factions + equipment + animations + weapon packs) |
+| `/api/models` | GET | All 6 race models |
+| `/api/models/:id` | GET | Single model with equipment slots |
+| `/api/models/:id/equip` | GET | Equipment slots for a model |
+| `/api/animations` | GET | All animation packs |
+| `/api/weapons` | GET | All 15 weapon model packs |
+| `/api/weapon-attachments/:modelId` | GET | Bone attachment presets for a model |
+| `/api/weapon-attachments` | POST | Create a new bone attachment |
+| `/api/weapon-attachments/:id` | PUT | Update attachment transforms |
+| `/api/weapon-attachments/:id` | DELETE | Remove a bone attachment |
+| `/health` | GET | Health check (v2.0.0) |
 
 ## Equipment Slot Architecture
 
@@ -265,6 +192,17 @@ All 6 race models share identical mesh naming with race-specific prefixes:
 
 **Prefixes:** WK_ (Human), BRB_ (Barbarian), ELF_ (Elf), DWF_ (Dwarf), ORC_ (Orc), UD_ (Undead)
 
+## Bone Weapon Editor
+
+The bottom-panel **Bone Weapon Editor** provides:
+
+- **Quick Equip Grid** — 22 weapon type presets (1H sword, dagger, pistol, rifle, crossbow, dual swords, dual daggers, etc.) that auto-select the correct bone + transform offsets
+- **Bone Picker** — Dropdown of all skeleton bones + quick-slot buttons (R Hand, L Hand, Shield, Back, Head, Hips)
+- **Live Transform Sliders** — Position XYZ, Rotation XYZ, Scale with real-time 3D preview
+- **Dual Wield** — Preset types like Dual Swords/Daggers/Axes load both main + offhand weapons simultaneously
+- **D1 Persistence** — Save/load/delete attachment configs via the Worker API
+- **Reset** — Snap sliders back to preset defaults without detaching
+
 ## Auth
 
 Authentication is handled by `GrudgeAuth.js` which connects to `api.grudge-studio.com`:
@@ -290,105 +228,13 @@ Character CRUD (create/read/update/delete) goes through the Grudge backend, not 
 | `npm run worker:dev` | Run Worker locally |
 | `npm run worker:deploy` | Deploy Worker to Cloudflare |
 
-## Controls & Hotkeys
-
-The viewport listens for `keydown` on `document.body` only — focus an input first and hotkeys are suppressed so you can type freely.
-
-| Key | Action | Module |
-|---|---|---|
-| `1`–`4` | Trigger hotbar slot 1–4 (weapon-specific action) | `WeaponAnimController.triggerAction('slotN')` |
-| `Q` (hold) | Block stance — releases on `keyup` | `triggerAction('block')` / `releaseBlock()` |
-| `E` | Dodge | `triggerAction('dodge')` |
-| `Z` | Battle Cry — alias for slot 4 with status banner | `triggerAction('slot4')` |
-| `Tab` | Toggle Combat / Harvest mode (rebinds hotbar) | `toggleMode()` |
-| `X` | Sheath current weapon (returns to unarmed pack) | `sheathWeapon()` |
-
-The on-screen hotbar (`#hotbarDisplay`) re-renders via `buildHotbarUI()` every time `WeaponAnimController` emits `change`, so the labels track the currently-equipped weapon type.
-
-Pointer controls are `OrbitControls` (left = rotate, right = pan, wheel = zoom) bound in `initScene()`.
-
-## Edit UI
-
-The right-hand panel is a tabbed editor wired up in `setupTabs()`. Each tab is populated by a dedicated builder so panels are independent:
-
-| Tab | Builder | Purpose |
-|---|---|---|
-| Equipment | `buildEquipmentUI(slots)` | Per-slot variant buttons grouped by `EquipmentManager.getGroupedSlots()`. Clicking a button calls `equipMgr.equip()` (armor) or `equipMgr.equipWeapon()` + `WeaponAnimController.equipWeapon()` (weapons/shields). The ✕ button calls `unequip(slot)`. |
-| Animations | `buildAnimationUI()` | `weaponPackSelect` dropdown drives `loadAnimation(packKey, fileName)`. |
-| Stats | `buildStatsPanel()` | 8 attribute sliders → `recalcStats()` → `calculateDerivedStats()`. |
-| Classes | `buildClassSelector()` | Class skill tree, no scene impact. |
-| Weapon Skills | `buildWeaponTypeGrid()` | Weapon mastery picker. |
-| Professions | `buildProfessionsPanel()` | T0–T8 profession tiers from `PROFESSIONS`. |
-| Weapon Mastery | `buildMasteryPanel()` | Simulated mastery XP per weapon. |
-| Saved Characters | `buildSavedCharactersList()` | `CharacterStore` CRUD with Save / Update / Load / Delete. |
-
-The status line at `#statusText` is updated by `updateStatus(msg)` after every model load, equipment change, save, and combat action.
-
-## Telemetry Pipeline
-
-User actions are batched in the browser by `src/modules/Telemetry.js` and POSTed to `models.grudge-studio.com/api/events`. The Worker validates the batch, stamps server-side `ts`, and forwards rows to the `grudge_events` Cloudflare Pipelines stream, which lands them in R2 as zstd-compressed Parquet partitioned by date/hour.
-
-### Event types
-
-| Event | Trigger | Top-level fields | Payload keys |
-|---|---|---|---|
-| `session_start` | `telemetry.init()` | — | `ua`, `lang` |
-| `session_end` | `pagehide` (sendBeacon) | — | — |
-| `asset_load` | Race model finishes loading | `faction_id`, `race_id` | `meshCount`, `animationCount`, `result` |
-| `equipment_change` | Armor slot button click | `faction_id`, `race_id`, `slot`, `variant` | `action` (`equip`/`unequip`) |
-| `weapon_equip` | Weapon/shield slot button click | `faction_id`, `race_id`, `slot`, `variant` | `animPack` |
-| `combat_action` | Combat hotkey pressed | `faction_id`, `race_id` | `action`, `weapon`, `mode` |
-| `character_save` | Save button | `faction_id`, `race_id` | `level`, `slots` |
-| `character_update` | Update button | `faction_id`, `race_id` | `level`, `slots` |
-
-Every row also gets `session_id` (random 16-hex per tab), `grudge_id` (set after sign-in), and the authoritative server `ts`. Anything not in the schema is dropped silently by Pipelines, so add new top-level columns by recreating the stream — do **not** stuff arbitrary fields outside `payload`.
-
-### Pipeline resources
-
-| Resource | Name | ID |
-|---|---|---|
-| R2 bucket | `grudge-events` | — |
-| Stream | `grudge_events_stream` | `074935299dc44ef089b448fdf065768f` |
-| Sink | `grudge_events_sink` | `2267fbbde5984e5591a3d003ba0b22e1` |
-| Pipeline | `grudge_events` | `d4de2ebbe8c04fa89a1e13f3bb3e9a97` |
-
-Schema source of truth: `d1/pipelines/grudge-events.schema.json`. Worker binding: `GRUDGE_EVENTS_STREAM` (see `wrangler.toml`).
-
-Smoke test the Worker endpoint:
-
-```powershell
-$body = '{"events":[{"event_type":"pipeline_smoke_test","payload":{"source":"local"}}]}'
-Invoke-RestMethod -Uri 'https://models.grudge-studio.com/api/events' -Method Post `
-  -ContentType 'application/json' -Body $body
-```
-
-## Dependencies
-
-Runtime (browser):
-
-- **three** — WebGL renderer, scene graph, loaders (FBX/GLTF/OBJ/STL/Collada/USDZ), `AnimationMixer`, `OrbitControls`.
-- **postprocessing** — Used by `PostFX.js` for bloom + tone mapping.
-- Native browser APIs only for telemetry — no analytics SDK.
-
-Build / tooling:
-
-- **vite** — Dev server + production bundler.
-- **wrangler** — Cloudflare Worker deploy + D1 + Pipelines management.
-- **@gltf-transform/cli** (via `npm run convert`) — FBX → GLB pipeline.
-
-Backend (separate repos, consumed only via HTTP):
-
-- **api.grudge-studio.com** — Grudge backend (Express + PostgreSQL + Drizzle ORM). Issues JWTs, owns character CRUD.
-- **models.grudge-studio.com** — This repo's Worker. Owns D1 manifest and events ingest.
-- **assets.grudge-studio.com** — R2 CDN. Static GLB + animation FBX bucket.
-
 ## Tech Stack
 
 - **Frontend:** Vanilla JS + Three.js, Vite
-- **3D:** FBXLoader + GLTFLoader (SmartLoader auto-detects), EquipmentManager mesh toggling
+- **3D:** FBXLoader + GLTFLoader + OBJ/DAE/STL/USDZ (SmartLoader), EquipmentManager mesh toggling, BoneAttachment weapon-to-bone system
 - **Backend:** Grudge API (api.grudge-studio.com) — Express, PostgreSQL, Drizzle ORM
-- **Model Manifest:** Cloudflare D1 (SQLite at edge) + Worker API
-- **Events Pipeline:** Cloudflare Pipelines (stream → SQL → sink) → R2 Parquet+zstd
+- **Model Manifest:** Cloudflare D1 (SQLite at edge) + Worker API (models.grudge-studio.com)
 - **Asset CDN:** Cloudflare R2 (assets.grudge-studio.com)
-- **Hosting:** Vercel (SPA deployment)
+- **Hosting:** Vercel (grudge-character-creator.vercel.app)
 - **Auth:** Grudge UUID + Discord/Google OAuth via backend
+- **Weapon Library:** 15 packs (340+ models), 22 bone presets, D1 CRUD for custom attachments

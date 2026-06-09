@@ -86,10 +86,11 @@
 
     /* Bottom Panel — collapsed into a toolbar at bottom of viewport */
     #bottomPanel { grid-column: 2; grid-row: 2/3; align-self: end; z-index: 5;
-      display: flex; gap: 1px; max-height: 180px; overflow: hidden;
+      display: flex; gap: 1px; max-height: 220px; overflow-x: auto; overflow-y: hidden;
       background: linear-gradient(0deg, rgba(11,16,32,.95) 60%, transparent); pointer-events: none; }
-    #bottomPanel > * { pointer-events: auto; flex: 1; padding: 8px; overflow-y: auto;
-      background: rgba(20,26,43,.9); border-top: 1px solid var(--border); max-height: 180px; }
+    #bottomPanel > * { pointer-events: auto; flex: 1 0 180px; padding: 8px; overflow-y: auto;
+      background: rgba(20,26,43,.9); border-top: 1px solid var(--border); max-height: 220px; }
+    #boneEditorPanel { flex: 1 0 280px; }
     #bottomPanel h3 { font-size: .75rem; margin-bottom: 6px; }
     #animPanel, #adminPanel { padding: 8px; }
     select, button.action-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
@@ -429,10 +430,12 @@
       <hr style="border-color:#333;margin:8px 0;">
       <button class="action-btn" id="togglePostFX" style="width:100%;margin-bottom:4px;">Toggle PostFX</button>
       <button class="action-btn" id="startBossFight" style="width:100%;margin-bottom:4px;background:#8b2020;">⚔️ Boss Fight Arena</button>
-      <button class="action-btn" id="listBones" style="width:100%;margin-bottom:4px;">List Bones (console)</button>
       <button class="action-btn" onclick="window.open('https://molochdagod.github.io/ObjectStore/ItemBrowser.html','_blank')" style="width:100%;">
         Open Item Browser ↗
       </button>
+    </div>
+    <div id="boneEditorPanel" style="padding:8px;min-width:260px;">
+      <p style="color:var(--muted);font-size:.7rem;">Load a character to use the Bone Weapon Editor</p>
     </div>
   </div>
 </div>
