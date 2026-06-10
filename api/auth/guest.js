@@ -5,7 +5,6 @@ const SECRET = process.env.JWT_SECRET || 'grudge-dev-secret';
 const TOKEN_EXPIRY = '30d';
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -24,9 +23,11 @@ export default async function handler(req, res) {
     const payload = {
       sub: userId,
       grudgeId,
+      // puterId links this JWT to a Puter identity for the Puter bridge flow.
+      // null when the user signs in as a plain guest without Puter.
       puterId: puterId || null,
       displayName: displayName || `Warlord_${grudgeId.slice(-4)}`,
-      role: 'guest',
+      role: puterId ? 'puter' : 'guest',
       iat: Math.floor(Date.now() / 1000),
     };
 
@@ -38,7 +39,8 @@ export default async function handler(req, res) {
         id: userId,
         grudgeId,
         displayName: payload.displayName,
-        role: 'guest',
+        role: payload.role,
+        puterId: payload.puterId,
       },
     });
   } catch (err) {

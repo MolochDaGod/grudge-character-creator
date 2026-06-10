@@ -151,6 +151,64 @@ class ApiClient {
     this._ready = false;
     try { window.puter.auth.signOut(); } catch { /* ignore */ }
   }
+
+  // ── Bone Weapon Attachment CRUD via D1 Worker ──
+
+  /**
+   * Get saved bone attachments for a model.
+   * @param {string} modelId - e.g. 'crusade_human'
+   */
+  async getAttachments(modelId) {
+    const resp = await fetch(`${this._manifestApi}/api/weapon-attachments/${modelId}`);
+    if (!resp.ok) throw new Error(`Failed to fetch attachments: ${resp.status}`);
+    const data = await resp.json();
+    return data.attachments || [];
+  }
+
+  /**
+   * Save a new bone weapon attachment.
+   * @param {object} attachment - { model_id, bone_name, weapon_url, weapon_name, slot_label, pos_x..z, rot_x..z, scale }
+   */
+  async saveAttachment(attachment) {
+    const resp = await fetch(`${this._manifestApi}/api/weapon-attachments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(attachment),
+    });
+    if (!resp.ok) throw new Error(`Failed to save attachment: ${resp.status}`);
+    return resp.json();
+  }
+
+  /**
+   * Update an existing bone attachment.
+   * @param {string} id - attachment ID
+   * @param {object} updates - fields to update
+   */
+  async updateAttachment(id, updates) {
+    const resp = await fetch(`${this._manifestApi}/api/weapon-attachments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!resp.ok) throw new Error(`Failed to update attachment: ${resp.status}`);
+    return resp.json();
+  }
+
+  /**
+   * Delete a bone attachment.
+   * @param {string} id - attachment ID
+   */
+  async deleteAttachment(id) {
+    const resp = await fetch(`${this._manifestApi}/api/weapon-attachments/${id}`, {
+      method: 'DELETE',
+    });
+    if (!resp.ok) throw new Error(`Failed to delete attachment: ${resp.status}`);
+    return resp.json();
+  }
+
+  get _manifestApi() {
+    return import.meta.env.VITE_MANIFEST_API || '';
+  }
 }
 
 export const apiClient = new ApiClient();

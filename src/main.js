@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { SkeletonHelper } from 'three';
-import { loadModel, loadAnimationClips, prepareModel, fbxLoader } from './modules/SmartLoader.js';
+import { loadModel, loadModelFromFile, loadAnimationClips, prepareModel, fbxLoader, initKTX2, SUPPORTED_EXTENSIONS } from './modules/SmartLoader.js';
 
 import { EquipmentManager } from './modules/EquipmentManager.js';
 import { getAllRaces, WEAPON_ANIMATION_PACKS, loadManifest, getAnimationPacks } from './modules/FactionRegistry.js';
@@ -24,6 +23,9 @@ import { PostFX } from './modules/PostFX.js';
 import { BoneAttachment } from './modules/BoneAttachment.js';
 import { BossFight } from './modules/BossFight.js';
 import { VFXManager } from './modules/VFXManager.js';
+import { ForgePanel } from './modules/ForgePanel.js';
+import { resolveTextures, classifyStyle } from './modules/TextureResolver.js';
+import { BoneWeaponEditor } from './modules/BoneWeaponEditor.js';
 
 // ════════════════════════════════════════════════════════════
 // State
@@ -51,6 +53,8 @@ let vfxMgr = null;
 let postfx = null;
 let boneAttach = new BoneAttachment();
 let bossFight = null;
+let forgePanel = null;
+let boneEditor = null;
 
 // ════════════════════════════════════════════════════════════
 // Scene Setup
@@ -67,15 +71,19 @@ function initScene() {
   camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 200);
   camera.position.set(0, 2.5, 5);
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // Renderer — best-in-class settings
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
+
+  // Initialize Draco-compressed GLTF + KTX2 GPU texture support
+  initKTX2(renderer);
 
   // Controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -135,6 +143,24 @@ function initScene() {
 
   // Init boss fight controller
   bossFight = new BossFight(scene, camera, { postfx, updateStatus });
+
+  // Init Forge panel (drag-drop model inspector)
+  forgePanel = new ForgePanel(scene, camera, controls, updateStatus);
+  forgePanel.initDropZone(container);
+
+  // Init Bone Weapon Editor
+  boneEditor = new BoneWeaponEditor(scene, boneAttach, updateStatus);
+  const boneEditorEl = document.getElementById('boneEditorPanel');
+  if (boneEditorEl) boneEditor.init(boneEditorEl);
+
+  // Forge file input + export button
+  document.getElementById('forgeFileInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (file && forgePanel) await forgePanel.loadDroppedFile(file);
+  });
+  document.getElementById('forgeExport')?.addEventListener('click', () => {
+    forgePanel?.exportJSON();
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -164,6 +190,13 @@ async function loadCharacterModel(raceConfig) {
     // Scale, center, shadows via SmartLoader helper
     prepareModel(model);
 
+    // Auto-resolve missing textures (toon for low-poly, PBR for high-poly)
+    const texResult = await resolveTextures(model, raceConfig.model);
+    if (texResult.discovered || texResult.generated) {
+      const style = classifyStyle(model);
+      console.log(`[TextureResolver] ${texResult.discovered} discovered, ${texResult.generated} generated (${style} style)`);
+    }
+
     scene.add(model);
     currentModel = model;
 
@@ -190,6 +223,13 @@ async function loadCharacterModel(raceConfig) {
     updateStatus(`Loaded ${raceConfig.name}: ${equipMgr.meshCount} equipment meshes found`);
     buildEquipmentUI(slots);
     buildHotbarUI();
+
+    // Update Bone Weapon Editor with new model
+    if (boneEditor) {
+      const mId = currentFactionId && currentRaceId ? `${currentFactionId}_${currentRaceId}` : null;
+      boneEditor.setModel(model, mId);
+    }
+
     overlay.classList.add('hidden');
 
   } catch (err) {
@@ -502,7 +542,7 @@ function setupAdminPanel() {
       let skeleton = null;
       currentModel.traverse(c => { if (c.isSkinnedMesh && !skeleton) skeleton = c; });
       if (skeleton) {
-        skeletonHelper = new SkeletonHelper(currentModel);
+      skeletonHelper = new THREE.SkeletonHelper(currentModel);
         scene.add(skeletonHelper);
       }
     }
@@ -559,14 +599,6 @@ function setupAdminPanel() {
     }
   });
 
-  // List bones (debug)
-  const bonesBtn = document.getElementById('listBones');
-  if (bonesBtn) bonesBtn.addEventListener("click", () => {
-    if (!currentModel) return;
-    const bones = BoneAttachment.listBones(currentModel);
-    console.log("Bones:", bones);
-    updateStatus(bones.length + " bones — see console");
-  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -580,7 +612,6 @@ function updateStatus(msg) {
 // Render Loop
 // ════════════════════════════════════════════════════════════
 function animate() {
-  requestAnimationFrame(animate);
   const dt = clock.getDelta();
   controls.update();
   if (mixer) mixer.update(dt);
@@ -987,7 +1018,7 @@ async function boot() {
   buildMasteryPanel();
   setupCombatHotkeys();
   setupPersistence();
-  animate();
+  renderer.setAnimationLoop(animate);
   updateStatus('Ready — select a faction race to load');
   initPersistence();
 }

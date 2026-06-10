@@ -49,6 +49,27 @@ CREATE TABLE IF NOT EXISTS animation_packs (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- ── Custom bone weapon attachments (user-defined) ──────────
+CREATE TABLE IF NOT EXISTS weapon_bone_attachments (
+  id            TEXT PRIMARY KEY,
+  model_id      TEXT NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+  bone_name     TEXT NOT NULL,
+  weapon_url    TEXT NOT NULL,
+  weapon_name   TEXT NOT NULL DEFAULT '',
+  slot_label    TEXT NOT NULL DEFAULT 'custom',
+  pos_x         REAL NOT NULL DEFAULT 0,
+  pos_y         REAL NOT NULL DEFAULT 0,
+  pos_z         REAL NOT NULL DEFAULT 0,
+  rot_x         REAL NOT NULL DEFAULT 0,
+  rot_y         REAL NOT NULL DEFAULT 0,
+  rot_z         REAL NOT NULL DEFAULT 0,
+  scale         REAL NOT NULL DEFAULT 1.0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_bone_attach_model ON weapon_bone_attachments(model_id);
+
 -- ── Weapon model packs (standalone weapon FBX/GLB) ─────────
 CREATE TABLE IF NOT EXISTS weapon_model_packs (
   id          TEXT PRIMARY KEY,

@@ -1,0 +1,1360 @@
+/**
+ * Cloudflare Worker — Model Manifest + Telemetry API
+ *
+ * Queries D1 (grudge-models) and returns model/equipment/animation data.
+ * Accepts telemetry event batches and forwards them to the Pipelines stream.
+ * Deploy: npx wrangler deploy (uses wrangler.toml at project root)
+ *
+ * Endpoints:
+ *   GET  /api/manifest           — full manifest (models + equipment + anims)
+ *   GET  /api/models             — list all race models
+ *   GET  /api/models/:id         — single model with equipment slots
+ *   GET  /api/models/:id/equip   — equipment slots for a model
+ *   GET  /api/animations         — all animation packs
+ *   GET  /api/weapons            — all weapon model packs
+ *   POST /api/events             — telemetry batch → GRUDGE_EVENTS_STREAM → R2
+ *   POST /api/ai/chat            — editor AI assistant (Workers AI llama-3.1-8b)
+ *   GET  /api/prefab/:uuid       — resolved character prefab for external games
+ */
+
+const ASSET_VERSION = 'v2';  // Bump when re-uploading textures to bust CDN cache
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Cache-Control": "public, max-age=300",
+};
+
+// No-cache variant for mutating endpoints (events ingest)
+const CORS_NOCACHE = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Cache-Control": "no-store",
+};
+
+function json(data, status = 200, headers = CORS_HEADERS) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...headers },
+  });
+}
+
+// Allowed event_type values — keep in sync with d1/pipelines/grudge-events.schema.json
+const ALLOWED_EVENT_TYPES = new Set([
+  "character_save",
+  "character_update",
+  "character_delete",
+  "character_active",
+  "equipment_change",
+  "weapon_equip",
+  "combat_action",
+  "asset_load",
+  "session_start",
+  "session_end",
+  "pipeline_smoke_test",
+]);
+const MAX_BATCH = 50;
+
+export default {
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: CORS_HEADERS });
+    }
+
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    try {
+      // ── Full manifest (primary endpoint for frontend) ──
+      if (path === "/api/manifest") {
+        return await getFullManifest(env.DB);
+      }
+
+      // ── Models ──
+      if (path === "/api/models") {
+        const { results } = await env.DB.prepare(
+          "SELECT * FROM models ORDER BY faction_id, race_id",
+        ).all();
+        return json({ models: results });
+      }
+
+      // ── Single model with equipment ──
+      const modelMatch = path.match(/^\/api\/models\/([^/]+)$/);
+      if (modelMatch) {
+        return await getModelWithEquipment(env.DB, modelMatch[1]);
+      }
+
+      // ── Equipment for model ──
+      const equipMatch = path.match(/^\/api\/models\/([^/]+)\/equip$/);
+      if (equipMatch) {
+        const { results } = await env.DB.prepare(
+          "SELECT * FROM equipment_slots WHERE model_id = ? ORDER BY sort_order",
+        )
+          .bind(equipMatch[1])
+          .all();
+        return json({ slots: results });
+      }
+
+      // ── Animation packs ──
+      if (path === "/api/animations") {
+        const { results } = await env.DB.prepare(
+          "SELECT * FROM animation_packs ORDER BY name",
+        ).all();
+        return json({
+          packs: results.map((p) => ({
+            ...p,
+            files: JSON.parse(p.files || "[]"),
+          })),
+        });
+      }
+
+      // ── Weapon model packs ──
+      if (path === "/api/weapons") {
+        const { results } = await env.DB.prepare(
+          "SELECT * FROM weapon_model_packs ORDER BY name",
+        ).all();
+        return json({ packs: results });
+      }
+
+      // ── Events ingest (forwards to Cloudflare Pipelines stream) ──
+      if (path === "/api/events" && request.method === "POST") {
+        return await ingestEvents(request, env);
+      }
+
+      // ── AI chat (editor assistant) ──
+      if (path === "/api/ai/chat" && request.method === "POST") {
+        return await aiChat(request, env);
+      }
+
+      // ── Public character prefab by UUID (for external games) ──
+      const prefabMatch = path.match(/^\/api\/prefab\/([a-zA-Z0-9_-]+)$/);
+      if (prefabMatch) {
+        return await getPrefab(env, prefabMatch[1]);
+      }
+
+      // ── Health check ──
+      if (path === "/health" || path === "/") {
+        return json({
+          status: "ok",
+          service: "grudge-models",
+          version: "1.0.0",
+        });
+      }
+
+      return json({ error: "Not found" }, 404);
+    } catch (err) {
+      console.error("Worker error:", err);
+      return json(
+        { error: "Internal server error", message: err.message },
+        500,
+      );
+    }
+  },
+};
+
+/**
+ * Build the full manifest — the single payload the frontend needs
+ * to initialize FactionRegistry, EquipmentManager, and animation packs.
+ */
+async function getFullManifest(db) {
+  const [modelsRes, slotsRes, animsRes, weaponsRes] = await Promise.all([
+    db.prepare("SELECT * FROM models ORDER BY faction_id, race_id").all(),
+    db
+      .prepare("SELECT * FROM equipment_slots ORDER BY model_id, sort_order")
+      .all(),
+    db.prepare("SELECT * FROM animation_packs ORDER BY name").all(),
+    db.prepare("SELECT * FROM weapon_model_packs ORDER BY name").all(),
+  ]);
+
+  // Group equipment slots by model_id
+  const slotsByModel = {};
+  for (const slot of slotsRes.results) {
+    if (!slotsByModel[slot.model_id]) slotsByModel[slot.model_id] = [];
+    slotsByModel[slot.model_id].push(slot);
+  }
+
+  // Build faction-grouped model structure (mirrors FactionRegistry.FACTIONS shape)
+  const factions = {};
+  for (const model of modelsRes.results) {
+    if (!factions[model.faction_id]) {
+      factions[model.faction_id] = {
+        name: model.faction_name,
+        color: model.faction_color,
+        races: {},
+      };
+    }
+    factions[model.faction_id].races[model.race_id] = {
+      name: model.name,
+      prefix: model.prefix,
+      model: model.r2_url + "?" + ASSET_VERSION,
+      format: model.format,
+      skeletonType: model.skeleton_type,
+      equipment: slotsByModel[model.id] || [],
+    };
+  }
+
+  // Parse animation pack files JSON
+  const animationPacks = {};
+  for (const pack of animsRes.results) {
+    animationPacks[pack.pack_key] = {
+      name: pack.name,
+      path: pack.r2_base_url,
+      files: JSON.parse(pack.files || "[]"),
+      extra: JSON.parse(pack.extra || "{}"),
+    };
+  }
+
+  // Weapon model packs
+  const weaponModelPacks = {};
+  for (const pack of weaponsRes.results) {
+    weaponModelPacks[pack.pack_key] = {
+      name: pack.name,
+      path: pack.r2_base_url,
+      count: pack.count,
+      prefix: pack.prefix,
+    };
+  }
+
+  return json({
+    version: "1.0.0",
+    generatedAt: new Date().toISOString(),
+    factions,
+    animationPacks,
+    weaponModelPacks,
+  });
+}
+
+/**
+ * POST /api/events — accept a batch of telemetry events and forward to the
+ * grudge_events Pipelines stream. Server stamps `ts` authoritatively and
+ * drops any field that isn't in the stream schema.
+ *
+ * Body: { events: [ {event_type, session_id?, grudge_id?, faction_id?, race_id?,
+ *                    slot?, variant?, payload?}, ... ] }
+ */
+async function ingestEvents(request, env) {
+  if (!env.GRUDGE_EVENTS_STREAM) {
+    return json(
+      { error: "Pipeline binding not configured" },
+      503,
+      CORS_NOCACHE,
+    );
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Invalid JSON" }, 400, CORS_NOCACHE);
+  }
+
+  const events = Array.isArray(body) ? body : body?.events;
+  if (!Array.isArray(events) || events.length === 0) {
+    return json({ error: "events[] required" }, 400, CORS_NOCACHE);
+  }
+  if (events.length > MAX_BATCH) {
+    return json(
+      { error: `batch too large (max ${MAX_BATCH})` },
+      413,
+      CORS_NOCACHE,
+    );
+  }
+
+  const now = Date.now();
+  const rows = [];
+  const rejected = [];
+
+  for (const e of events) {
+    if (!e || typeof e !== "object") {
+      rejected.push("non-object");
+      continue;
+    }
+    if (!ALLOWED_EVENT_TYPES.has(e.event_type)) {
+      rejected.push(`bad event_type: ${e.event_type}`);
+      continue;
+    }
+    rows.push({
+      event_type: String(e.event_type),
+      ts: now,
+      session_id: e.session_id ? String(e.session_id).slice(0, 64) : null,
+      grudge_id: e.grudge_id ? String(e.grudge_id).slice(0, 64) : null,
+      faction_id: e.faction_id ? String(e.faction_id).slice(0, 32) : null,
+      race_id: e.race_id ? String(e.race_id).slice(0, 32) : null,
+      slot: e.slot ? String(e.slot).slice(0, 32) : null,
+      variant: e.variant ? String(e.variant).slice(0, 64) : null,
+      payload: e.payload && typeof e.payload === "object" ? e.payload : null,
+    });
+  }
+
+  if (rows.length === 0) {
+    return json({ error: "no valid events", rejected }, 400, CORS_NOCACHE);
+  }
+
+  try {
+    await env.GRUDGE_EVENTS_STREAM.send(rows);
+  } catch (err) {
+    console.error("Pipeline send failed:", err);
+    return json(
+      { error: "pipeline send failed", message: err.message },
+      502,
+      CORS_NOCACHE,
+    );
+  }
+
+  return json(
+    { ok: true, accepted: rows.length, rejected: rejected.length },
+    200,
+    CORS_NOCACHE,
+  );
+}
+
+async function getModelWithEquipment(db, modelId) {
+  const model = await db.prepare('SELECT * FROM models WHERE id = ?').bind(modelId).first();
+  if (!model) return json({ error: 'Model not found' }, 404);
+
+  const { results: slots } = await db.prepare(
+    'SELECT * FROM equipment_slots WHERE model_id = ? ORDER BY sort_order'
+  ).bind(modelId).all();
+
+  return json({ model, equipment: slots });
+}
+  container.innerHTML = races
+    .map(
+      (r) => `
+    <button class="faction-btn" data-faction="${r.factionId}" data-race="${r.raceId}">
+      <span class="faction-dot" style="background:${r.factionColor}"></span>
+      <span>${r.factionName} — ${r.name}</span>
+    </button>
+  `,
+    )
+    .join("");
+
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest(".faction-btn");
+    if (!btn) return;
+    container
+      .querySelectorAll(".faction-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const race = races.find(
+      (r) =>
+        r.factionId === btn.dataset.faction && r.raceId === btn.dataset.race,
+    );
+    if (race) {
+      currentFactionId = race.factionId;
+      currentRaceId = race.raceId;
+      loadCharacterModel(race);
+    }
+  });
+}
+
+function buildEquipmentUI(slots) {
+  const container = document.getElementById("equipmentPanel");
+  const grouped = equipMgr.getGroupedSlots();
+
+  let html = "";
+  for (const [groupName, groupSlots] of Object.entries(grouped)) {
+    const slotEntries = Object.entries(groupSlots);
+    if (slotEntries.length === 0) continue;
+
+    html += `<div class="slot-group"><h4>${groupName}</h4>`;
+    for (const [slot, info] of slotEntries) {
+      html += `<div class="slot-row"><span class="slot-label">${slot}</span>`;
+      for (const variant of info.variants) {
+        const label = variant === "_default" ? "●" : variant;
+        const isEquipped = info.equipped === variant;
+        html += `<button class="slot-btn ${isEquipped ? "equipped" : ""}"
+          data-slot="${slot}" data-variant="${variant}">${label}</button>`;
+      }
+      html += `<button class="slot-btn" data-slot="${slot}" data-variant="_none" title="Unequip">✕</button>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+
+  container.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".slot-btn");
+    if (!btn) return;
+    const { slot, variant } = btn.dataset;
+
+    if (variant === "_none") {
+      equipMgr.unequip(slot);
+      // If unequipping a weapon, sheath animations
+      if (WEAPON_ANIM_MAP[slot] && weaponCtrl) {
+        weaponCtrl.sheathWeapon();
+      }
+      telemetry.track(EVENT_TYPES.EQUIPMENT_CHANGE, {
+        faction_id: currentFactionId,
+        race_id: currentRaceId,
+        slot,
+        variant: null,
+        action: "unequip",
+      });
+    } else {
+      // Use equipWeapon for weapon/shield slots for mutual exclusion
+      const isWeaponSlot = [
+        "axe",
+        "hammer",
+        "sword",
+        "pick",
+        "spear",
+        "bow",
+        "staff",
+        "shield",
+      ].includes(slot);
+      if (isWeaponSlot) {
+        equipMgr.equipWeapon(slot, variant);
+        // Auto-switch to weapon's animation pack
+        if (WEAPON_ANIM_MAP[slot] && weaponCtrl && currentModel && mixer) {
+          await weaponCtrl.equipWeapon(
+            slot,
+            WEAPON_ANIMATION_PACKS,
+            currentModel,
+          );
+          // Auto-select the animation pack in the dropdown
+          const packSelect = document.getElementById("weaponPackSelect");
+          if (packSelect) {
+            packSelect.value = WEAPON_ANIM_MAP[slot].animPack;
+            packSelect.dispatchEvent(new Event("change"));
+          }
+        }
+        telemetry.track(EVENT_TYPES.WEAPON_EQUIP, {
+          faction_id: currentFactionId,
+          race_id: currentRaceId,
+          slot,
+          variant,
+          animPack: WEAPON_ANIM_MAP[slot]?.animPack || null,
+        });
+      } else {
+        equipMgr.equip(slot, variant);
+        telemetry.track(EVENT_TYPES.EQUIPMENT_CHANGE, {
+          faction_id: currentFactionId,
+          race_id: currentRaceId,
+          slot,
+          variant,
+          action: "equip",
+        });
+      }
+    }
+    // Refresh UI
+    buildEquipmentUI(equipMgr.getSlotSummary());
+  });
+}
+
+function buildAnimationUI() {
+  const select = document.getElementById("weaponPackSelect");
+  for (const [key, pack] of Object.entries(WEAPON_ANIMATION_PACKS)) {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = pack.name;
+    select.appendChild(opt);
+  }
+
+  select.addEventListener("change", () => {
+    const pack = WEAPON_ANIMATION_PACKS[select.value];
+    const list = document.getElementById("animList");
+    if (!pack) {
+      list.innerHTML = "";
+      return;
+    }
+
+    list.innerHTML = pack.files
+      .map((f) => {
+        const label = f.replace(".fbx", "").replace(".FBX", "");
+        return `<button class="anim-btn" data-pack="${select.value}" data-file="${f}" title="${label}">${label}</button>`;
+      })
+      .join("");
+  });
+
+  document.getElementById("animList").addEventListener("click", (e) => {
+    const btn = e.target.closest(".anim-btn");
+    if (!btn) return;
+    loadAnimation(btn.dataset.pack, btn.dataset.file);
+  });
+
+  // Speed control
+  document.getElementById("animSpeed").addEventListener("input", (e) => {
+    const val = parseFloat(e.target.value);
+    document.getElementById("animSpeedVal").textContent = val.toFixed(1) + "x";
+    if (currentAction) currentAction.timeScale = val;
+  });
+
+  // Pause/Stop
+  document.getElementById("animPause").addEventListener("click", () => {
+    if (currentAction) {
+      currentAction.paused = !currentAction.paused;
+      document.getElementById("animPause").textContent = currentAction.paused
+        ? "▶ Play"
+        : "⏸ Pause";
+    }
+  });
+  document.getElementById("animStop").addEventListener("click", () => {
+    if (currentAction) {
+      currentAction.stop();
+      currentAction = null;
+    }
+    document
+      .querySelectorAll(".anim-btn")
+      .forEach((b) => b.classList.remove("playing"));
+  });
+}
+
+function highlightAnimButton(name) {
+  document.querySelectorAll(".anim-btn").forEach((b) => {
+    b.classList.toggle("playing", b.textContent === name);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// Stats Panel
+// ════════════════════════════════════════════════════════════
+function buildStatsPanel() {
+  const container = document.getElementById("attributeSliders");
+  container.innerHTML = ATTR_KEYS.map((key) => {
+    const attr = ATTRIBUTES[key];
+    return `<div class="attr-row">
+      <label style="color:${attr.color}" title="${attr.desc}">${attr.icon} ${key}</label>
+      <input type="range" min="0" max="80" value="${character.attrs[key]}" data-attr="${key}">
+      <span class="val" data-val="${key}">${character.attrs[key]}</span>
+    </div>`;
+  }).join("");
+
+  container.addEventListener("input", (e) => {
+    const slider = e.target.closest("input[data-attr]");
+    if (!slider) return;
+    const key = slider.dataset.attr;
+    character.attrs[key] = parseInt(slider.value);
+    document.querySelector(`[data-val="${key}"]`).textContent = slider.value;
+    recalcStats();
+  });
+
+  recalcStats();
+}
+
+function recalcStats() {
+  const total = ATTR_KEYS.reduce(
+    (sum, k) => sum + (character.attrs[k] || 0),
+    0,
+  );
+  document.getElementById("pointsDisplay").textContent =
+    `${total} / ${MAX_POINTS}`;
+  document.getElementById("pointsDisplay").style.color =
+    total > MAX_POINTS
+      ? "#ef4444"
+      : total === MAX_POINTS
+        ? "#6ee7b7"
+        : "#e8eaf6";
+
+  character.stats = calculateDerivedStats(character.attrs, character.level);
+
+  const statsEl = document.getElementById("derivedStats");
+  const statSections = [
+    {
+      title: "⚔️ Offense",
+      css: "offense",
+      stats: {
+        meleeAttack: "Melee ATK",
+        rangedAttack: "Ranged ATK",
+        spellPower: "Spell Power",
+        attackSpeed: "ATK Speed",
+        critChance: "Crit %",
+        critDamage: "Crit DMG %",
+        defenseBreak: "Def Break",
+        armorPenetration: "Armor Pen",
+        accuracy: "Accuracy",
+      },
+    },
+    {
+      title: "🛡️ Defense",
+      css: "defense",
+      stats: {
+        maxHP: "Max HP",
+        maxMana: "Max Mana",
+        maxStamina: "Max Stamina",
+        defense: "Defense",
+        magicResist: "Magic Res",
+        blockChance: "Block %",
+        blockFactor: "Block Factor",
+        dodgeChance: "Dodge %",
+        critEvasion: "Crit Evasion",
+        ccResistance: "CC Resist",
+        absorbFactor: "Absorb %",
+      },
+    },
+    {
+      title: "💚 Regen",
+      css: "regen",
+      stats: {
+        hpRegen: "HP / sec",
+        manaRegen: "Mana / sec",
+        staminaRegen: "Stam / sec",
+      },
+    },
+    {
+      title: "⚡ Utility",
+      css: "utility",
+      stats: {
+        moveSpeed: "Move Speed",
+        cooldownReduction: "CDR %",
+        abilityCostRed: "Cost Reduce %",
+        comboCooldownRed: "Combo CDR %",
+        carryWeight: "Carry Weight",
+        miningBonus: "Mining +",
+        craftingBonus: "Crafting +",
+        harvestBonus: "Harvest +",
+      },
+    },
+    {
+      title: "💀 Summary",
+      css: "offense",
+      stats: {
+        combatPower: "Combat Power",
+      },
+    },
+  ];
+
+  const fmt = (v) =>
+    typeof v === "number" ? (Number.isInteger(v) ? v : v.toFixed(1)) : v;
+  statsEl.innerHTML = statSections
+    .map((sec) => {
+      const rows = Object.entries(sec.stats)
+        .map(([key, label]) => {
+          const val = character.stats[key] ?? 0;
+          return `<div class="stat-item stat-item--${sec.css}"><span class="label">${label}</span><span class="value">${fmt(val)}</span></div>`;
+        })
+        .join("");
+      return `<div style="grid-column:1/-1;font-size:.65rem;color:var(--muted);padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">${sec.title}</div>${rows}`;
+    })
+    .join("");
+}
+
+// Combat test
+function setupCombatTest() {
+  const dummy = createDefaultCharacter(10);
+  // Dummy has even stats but lower
+  ATTR_KEYS.forEach((k) => (dummy.attrs[k] = 15));
+  dummy.stats = calculateDerivedStats(dummy.attrs, 10);
+
+  document.getElementById("combatTestBtn").addEventListener("click", () => {
+    const result = simulateCombat(character, dummy);
+    const logEl = document.getElementById("combatLog");
+    logEl.innerHTML = result.log
+      .map((line) => {
+        if (line.includes("CRITICAL")) return `<div class="crit">${line}</div>`;
+        if (line.includes("BLOCKED")) return `<div class="block">${line}</div>`;
+        return `<div>${line}</div>`;
+      })
+      .join("");
+    logEl.scrollTop = logEl.scrollHeight;
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// Admin Panel
+// ════════════════════════════════════════════════════════════
+function setupAdminPanel() {
+  // Toggle wireframe
+  document.getElementById("toggleWireframe").addEventListener("click", () => {
+    wireframeMode = !wireframeMode;
+    currentModel?.traverse((child) => {
+      if (child.isMesh || child.isSkinnedMesh) {
+        const mats = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        mats.forEach((m) => {
+          m.wireframe = wireframeMode;
+        });
+      }
+    });
+    updateStatus(`Wireframe: ${wireframeMode ? "ON" : "OFF"}`);
+  });
+
+  // Toggle skeleton helper
+  document.getElementById("toggleSkeleton").addEventListener("click", () => {
+    if (skeletonHelper) {
+      scene.remove(skeletonHelper);
+      skeletonHelper = null;
+    } else if (currentModel) {
+      let skeleton = null;
+      currentModel.traverse((c) => {
+        if (c.isSkinnedMesh && !skeleton) skeleton = c;
+      });
+      if (skeleton) {
+        skeletonHelper = new SkeletonHelper(currentModel);
+        scene.add(skeletonHelper);
+      }
+    }
+  });
+
+  // Show all equipment
+  document.getElementById("showAllParts").addEventListener("click", () => {
+    if (equipMgr) {
+      equipMgr.showAll();
+      buildEquipmentUI(equipMgr.getSlotSummary());
+      updateStatus("All equipment visible");
+    }
+  });
+
+  // Reset camera
+  document.getElementById("resetCamera").addEventListener("click", () => {
+    camera.position.set(0, 2.5, 5);
+    controls.target.set(0, 1, 0);
+    controls.update();
+  });
+
+  // Spawn test dummy
+  document.getElementById("spawnDummy").addEventListener("click", () => {
+    const geo = new THREE.CapsuleGeometry(0.3, 1.2, 4, 8);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xcc4444,
+      roughness: 0.6,
+    });
+    const dummy = new THREE.Mesh(geo, mat);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 3 + Math.random() * 3;
+    dummy.position.set(Math.cos(angle) * dist, 0.9, Math.sin(angle) * dist);
+    dummy.castShadow = true;
+    scene.add(dummy);
+    dummies.push(dummy);
+    updateStatus(`Spawned dummy (${dummies.length} total)`);
+  });
+
+  // Toggle PostFX
+  const pfxBtn = document.getElementById("togglePostFX");
+  if (pfxBtn)
+    pfxBtn.addEventListener("click", () => {
+      if (postfx) {
+        const on = postfx.toggle();
+        updateStatus("Post-processing: " + (on ? "ON" : "OFF"));
+      }
+    });
+
+  // Boss Fight button
+  const bossBtn = document.getElementById("startBossFight");
+  if (bossBtn)
+    bossBtn.addEventListener("click", async () => {
+      if (!bossFight) return;
+      if (bossFight.isActive) {
+        bossFight.exit();
+      } else {
+        if (!currentModel) {
+          updateStatus("Load a character first!");
+          return;
+        }
+        await bossFight.enter(currentModel, mixer);
+      }
+    });
+
+  // List bones (debug)
+  const bonesBtn = document.getElementById("listBones");
+  if (bonesBtn)
+    bonesBtn.addEventListener("click", () => {
+      if (!currentModel) return;
+      const bones = BoneAttachment.listBones(currentModel);
+      console.log("Bones:", bones);
+      updateStatus(bones.length + " bones — see console");
+    });
+}
+
+// ════════════════════════════════════════════════════════════
+// Utility
+// ════════════════════════════════════════════════════════════
+function updateStatus(msg) {
+  document.getElementById("statusBar").textContent = msg;
+}
+
+// ════════════════════════════════════════════════════════════
+// Render Loop
+// ════════════════════════════════════════════════════════════
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  controls.update();
+  if (mixer) mixer.update(dt);
+
+  // VFX update — ticks particle lifetimes and normalized-time watchers
+  if (vfxMgr) vfxMgr.update(dt);
+
+  // Boss fight update
+  if (bossFight && bossFight.isActive) {
+    bossFight.update(dt, currentModel);
+  }
+
+  // Render via PostFX pipeline (falls back to direct render when disabled)
+  if (postfx) {
+    postfx.update(dt);
+  } else {
+    renderer.render(scene, camera);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// Tab System
+// ════════════════════════════════════════════════════════════
+function setupTabs() {
+  const tabBar = document.getElementById("mainTabBar");
+  tabBar.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+    const tabId = btn.dataset.tab;
+    tabBar
+      .querySelectorAll(".tab-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    document
+      .querySelectorAll("#rightPanel .tab-content")
+      .forEach((c) => c.classList.remove("active"));
+    document.getElementById(tabId).classList.add("active");
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// Class Skills Tab
+// ════════════════════════════════════════════════════════════
+let selectedClass = null;
+
+function buildClassSelector() {
+  const container = document.getElementById("classSelector");
+  container.innerHTML = Object.entries(CLASSES)
+    .map(
+      ([id, cls]) => `
+    <div class="class-card" data-class="${id}">
+      <div class="class-header">
+        <span style="color:${cls.color}">${cls.icon}</span>
+        <span style="color:${cls.color}">${cls.name}</span>
+        <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">${cls.primaryAttr}/${cls.secondaryAttr}</span>
+      </div>
+      <div class="class-desc">${cls.desc}</div>
+    </div>
+  `,
+    )
+    .join("");
+
+  container.addEventListener("click", (e) => {
+    const card = e.target.closest(".class-card");
+    if (!card) return;
+    selectedClass = card.dataset.class;
+    container
+      .querySelectorAll(".class-card")
+      .forEach((c) => c.classList.remove("selected"));
+    card.classList.add("selected");
+    buildClassSkillTrees(selectedClass);
+  });
+}
+
+function buildClassSkillTrees(classId) {
+  const container = document.getElementById("classSkillTrees");
+  const classData = CLASS_SKILLS[classId];
+  if (!classData) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const cls = CLASSES[classId];
+  let html = `<p style="font-size:.7rem;color:var(--muted);margin-bottom:6px;">${cls.passive}</p>`;
+  html += `<p style="font-size:.65rem;color:var(--muted);margin-bottom:8px;">Weapons: ${cls.weaponTypes.map((w) => WEAPON_TYPES[w]?.name || w).join(", ")}</p>`;
+
+  for (const [treeId, tree] of Object.entries(classData.trees)) {
+    html += `<div class="tree-section">`;
+    html += `<div class="tree-header">${tree.icon} ${tree.name} <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">${tree.desc}</span></div>`;
+    for (const skill of tree.skills) {
+      const modelBadge = skill.model
+        ? ' <span style="color:#fbbf24;font-size:.6rem;">[3D]</span>'
+        : "";
+      html += `<div class="skill-node">
+        <span class="skill-lvl">Lv${skill.level}</span>
+        <span class="skill-name">${skill.name}${modelBadge}</span>
+        <span class="skill-cost">${skill.cost}pt</span>
+        <div class="skill-desc">${skill.desc}${skill.model ? '<br><em style="color:#fbbf24;">Has 3D form model</em>' : ""}</div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Show Worge forms preview if Worge class
+  if (classId === "worge") {
+    html += `<h3 style="margin-top:10px;">Form Models</h3>`;
+    for (const [fid, form] of Object.entries(WORGE_FORMS)) {
+      const hasModel = form.model ? "\u2705" : "\u274c";
+      html += `<div class="skill-node">
+        <span class="skill-lvl">${form.icon}</span>
+        <span class="skill-name">${form.name} ${hasModel}</span>
+        <div class="skill-desc">${form.desc}</div>
+      </div>`;
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// Weapon Skills Tab
+// ════════════════════════════════════════════════════════════
+function buildWeaponTypeGrid() {
+  const grid = document.getElementById("weaponTypeGrid");
+  grid.innerHTML = Object.entries(WEAPON_TYPES)
+    .map(
+      ([id, wep]) =>
+        `<button class="wep-type-btn" data-wep="${id}" title="${wep.name}">${wep.icon}<br>${wep.name.split(" ").pop()}</button>`,
+    )
+    .join("");
+
+  grid.addEventListener("click", (e) => {
+    const btn = e.target.closest(".wep-type-btn");
+    if (!btn) return;
+    grid
+      .querySelectorAll(".wep-type-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    buildWeaponSkillTree(btn.dataset.wep);
+  });
+}
+
+function buildWeaponSkillTree(weaponId) {
+  const container = document.getElementById("weaponSkillTree");
+  const wepData = WEAPON_SKILLS[weaponId];
+  const wepType = WEAPON_TYPES[weaponId];
+  if (!wepData) {
+    container.innerHTML = "";
+    return;
+  }
+
+  let html = `<p style="font-size:.65rem;color:var(--muted);margin-bottom:6px;">Classes: ${wepType.classes.map((c) => CLASSES[c]?.name || c).join(", ")} • ${wepType.hand.toUpperCase()}</p>`;
+  html += `<div class="tree-section">`;
+  html += `<div class="tree-header">${wepData.icon} ${wepData.name} Skill Tree</div>`;
+  for (const skill of wepData.skills) {
+    html += `<div class="skill-node">
+      <span class="skill-lvl">Lv${skill.level}</span>
+      <span class="skill-name">${skill.name}</span>
+      <span class="skill-cost" style="color:var(--muted);">${skill.bonus}</span>
+      <div class="skill-desc">${skill.desc}</div>
+    </div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// Professions Tab
+// ════════════════════════════════════════════════════════════
+function buildProfessionsPanel() {
+  const container = document.getElementById("professionsList");
+  container.innerHTML = Object.entries(PROFESSIONS)
+    .map(([id, prof]) => {
+      const tiers = prof.tiers
+        .map(
+          (t) =>
+            `<div class="prof-tier">
+        <span class="tier-lvl">Lv${t.level}</span>
+        <span class="tier-name">${t.name}</span>
+        <span class="tier-res">${t.resources.join(", ")}</span>
+      </div>`,
+        )
+        .join("");
+      return `<div class="prof-card">
+      <div class="prof-header">
+        <span>${prof.icon}</span>
+        <span style="color:${prof.color}">${prof.name}</span>
+        <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">Bonus: ${prof.attr}</span>
+      </div>
+      <p style="font-size:.65rem;color:var(--muted);margin-bottom:4px;">${prof.desc}</p>
+      ${tiers}
+    </div>`;
+    })
+    .join("");
+}
+
+// ════════════════════════════════════════════════════════════
+// Weapon Mastery Tab
+// ════════════════════════════════════════════════════════════
+function buildMasteryPanel() {
+  const container = document.getElementById("masteryList");
+  // Simulated mastery XP per weapon (in real game, this comes from server)
+  const simulatedXP = {};
+  for (const id of Object.keys(WEAPON_TYPES)) {
+    simulatedXP[id] = Math.floor(Math.random() * 15000);
+  }
+
+  container.innerHTML = Object.entries(WEAPON_TYPES)
+    .map(([id, wep]) => {
+      const xp = simulatedXP[id];
+      const { current, next, progress } = getMasteryProgress(xp);
+      const pct = Math.floor(progress * 100);
+      const nextLabel = next ? `${next.name} (${next.xp} XP)` : "MAX";
+      return `<div class="mastery-row">
+      <span class="mastery-icon">${wep.icon}</span>
+      <div class="mastery-info">
+        <div class="mastery-name">${wep.name}</div>
+        <div class="mastery-tier">${current.name} — ${current.bonus}</div>
+        <div class="mastery-bar"><div class="mastery-fill" style="width:${pct}%"></div></div>
+      </div>
+      <span class="mastery-xp">${xp} XP</span>
+    </div>`;
+    })
+    .join("");
+}
+
+// ════════════════════════════════════════════════════════════
+// Persistence UI
+// ════════════════════════════════════════════════════════════
+function buildSavedCharactersList() {
+  const container = document.getElementById("savedCharactersList");
+  const countEl = document.getElementById("charCount");
+  const chars = characterStore.characters;
+  countEl.textContent = `(${chars.length})`;
+
+  if (chars.length === 0) {
+    container.innerHTML =
+      '<p style="color:var(--muted);font-size:.8rem;">No saved characters yet</p>';
+    return;
+  }
+
+  container.innerHTML = chars
+    .map(
+      (c) => `
+    <div class="saved-char ${c.id === characterStore.activeId ? "active" : ""}" data-id="${c.id}">
+      <span class="char-name">${c.name}</span>
+      <span class="char-race">${c.factionId}/${c.raceId}</span>
+      <span class="char-delete" data-delete="${c.id}" title="Delete">✕</span>
+    </div>
+  `,
+    )
+    .join("");
+
+  container.addEventListener("click", async (e) => {
+    const deleteBtn = e.target.closest("[data-delete]");
+    if (deleteBtn) {
+      e.stopPropagation();
+      const id = deleteBtn.dataset.delete;
+      if (confirm("Delete this character?")) {
+        await characterStore.remove(id);
+        updateStatus("Character deleted");
+      }
+      return;
+    }
+    const row = e.target.closest(".saved-char");
+    if (!row) return;
+    const id = row.dataset.id;
+    characterStore.setActive(id);
+    loadSavedCharacter(id);
+  });
+}
+
+function loadSavedCharacter(id) {
+  const char = characterStore.characters.find((c) => c.id === id);
+  if (!char) return;
+
+  const races = getAllRaces();
+  const race = races.find(
+    (r) => r.factionId === char.factionId && r.raceId === char.raceId,
+  );
+  if (!race) {
+    updateStatus(`Race ${char.factionId}/${char.raceId} not found`);
+    return;
+  }
+
+  // Restore faction/race
+  currentFactionId = char.factionId;
+  currentRaceId = char.raceId;
+
+  // Highlight the race button
+  document.querySelectorAll(".faction-btn").forEach((b) => {
+    b.classList.toggle(
+      "active",
+      b.dataset.faction === char.factionId && b.dataset.race === char.raceId,
+    );
+  });
+
+  // Restore attributes
+  if (char.attrs) {
+    for (const key of ATTR_KEYS) {
+      if (char.attrs[key] !== undefined) {
+        character.attrs[key] = char.attrs[key];
+        const slider = document.querySelector(`input[data-attr="${key}"]`);
+        if (slider) slider.value = char.attrs[key];
+        const valEl = document.querySelector(`[data-val="${key}"]`);
+        if (valEl) valEl.textContent = char.attrs[key];
+      }
+    }
+    character.level = char.level || 1;
+    recalcStats();
+  }
+
+  // Load model and restore equipment after load
+  loadCharacterModel(race).then(() => {
+    if (char.equipped && equipMgr) {
+      for (const [slot, variant] of Object.entries(char.equipped)) {
+        equipMgr.equip(slot, variant);
+      }
+      buildEquipmentUI(equipMgr.getSlotSummary());
+    }
+    updateStatus(`Loaded: ${char.name}`);
+    document.getElementById("updateBuildBtn").style.display = "";
+  });
+}
+
+function getEditorState() {
+  return {
+    factionId: currentFactionId,
+    raceId: currentRaceId,
+    equipped: equipMgr ? { ...equipMgr.equipped } : {},
+    attrs: { ...character.attrs },
+    level: character.level,
+  };
+}
+
+function setupPersistence() {
+  // Save button
+  document
+    .getElementById("saveBuildBtn")
+    .addEventListener("click", async () => {
+      if (!currentFactionId || !currentRaceId) {
+        updateStatus("Select a race first");
+        return;
+      }
+      const name = prompt(
+        "Character name:",
+        `Character ${characterStore.characters.length + 1}`,
+      );
+      if (name === null) return;
+
+      const state = getEditorState();
+      state.name = name;
+      await characterStore.save(state);
+      document.getElementById("updateBuildBtn").style.display = "";
+      updateStatus(`Saved: ${name}`);
+      telemetry.track(EVENT_TYPES.CHARACTER_SAVE, {
+        faction_id: state.factionId,
+        race_id: state.raceId,
+        level: state.level,
+        slots: Object.keys(state.equipped || {}).length,
+      });
+    });
+
+  // Update button
+  document
+    .getElementById("updateBuildBtn")
+    .addEventListener("click", async () => {
+      if (!characterStore.activeId) return;
+      const state = getEditorState();
+      await characterStore.update(state);
+      updateStatus("Build updated");
+      telemetry.track(EVENT_TYPES.CHARACTER_UPDATE, {
+        faction_id: state.factionId,
+        race_id: state.raceId,
+        level: state.level,
+        slots: Object.keys(state.equipped || {}).length,
+      });
+    });
+
+  // React to store changes
+  characterStore.addEventListener("change", () => buildSavedCharactersList());
+  characterStore.addEventListener("error", (e) =>
+    updateStatus(`Error: ${e.detail?.message || "Unknown"}`),
+  );
+}
+
+async function initPersistence() {
+  const signInBtn = document.getElementById("signInBtn");
+  const discordBtn = document.getElementById("discordSignInBtn");
+  const userDisplay = document.getElementById("userDisplay");
+
+  async function onSignedIn(user) {
+    try {
+      userDisplay.textContent = user.displayName || user.grudgeId || "";
+      signInBtn.style.display = "none";
+      if (discordBtn) discordBtn.style.display = "none";
+      await characterStore.load();
+      buildSavedCharactersList();
+      updateStatus("Signed in as " + (user.displayName || user.grudgeId));
+    } catch (err) {
+      console.error("Auth load failed:", err);
+      showOffline();
+    }
+  }
+
+  function showOffline() {
+    signInBtn.style.display = "";
+    if (discordBtn) discordBtn.style.display = "";
+    document.getElementById("savedCharactersList").innerHTML =
+      '<p style="color:var(--muted);font-size:.8rem;">Sign in to save characters</p>';
+  }
+
+  // Guest sign-in button
+  signInBtn.addEventListener("click", async () => {
+    try {
+      const user = await grudgeAuth.loginAsGuest();
+      await onSignedIn(user);
+    } catch (err) {
+      console.error("Sign-in failed:", err);
+      updateStatus("Sign-in failed: " + err.message);
+    }
+  });
+
+  // Discord sign-in button
+  if (discordBtn) {
+    discordBtn.addEventListener("click", () => grudgeAuth.loginWithDiscord());
+  }
+
+  // Handle OAuth callback (token in URL from Discord/Google redirect)
+  const callbackUser = await grudgeAuth.handleOAuthCallback();
+  if (callbackUser) {
+    await onSignedIn(callbackUser);
+    return;
+  }
+
+  // Try to restore existing session
+  const existingUser = await grudgeAuth.init();
+  if (existingUser) {
+    await onSignedIn(existingUser);
+  } else {
+    showOffline();
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// Boot
+// ════════════════════════════════════════════════════════════
+// Boot sequence — load D1 manifest first, then build UI
+async function boot() {
+  initScene();
+
+  // Telemetry — events stream to models.grudge-studio.com → Pipelines → R2
+  const eventsEndpoint =
+    (MANIFEST_API || "https://models.grudge-studio.com") + "/api/events";
+  telemetry.init({ endpoint: eventsEndpoint });
+
+  // Fetch D1 manifest (overwrites bundled data if available)
+  await loadManifest();
+
+  buildRaceSelector();
+  buildAnimationUI();
+  buildStatsPanel();
+  setupCombatTest();
+  setupAdminPanel();
+  setupTabs();
+  buildClassSelector();
+  buildWeaponTypeGrid();
+  buildProfessionsPanel();
+  buildMasteryPanel();
+  setupCombatHotkeys();
+  setupPersistence();
+  animate();
+  updateStatus("Ready — select a faction race to load");
+  initPersistence();
+}
+boot();
+
+// ════════════════════════════════════════════════════════════
+// Combat Hotkeys & Hotbar
+// ════════════════════════════════════════════════════════════
+function setupCombatHotkeys() {
+  window.addEventListener("keydown", (e) => {
+    if (e.target !== document.body) return;
+    if (!weaponCtrl) return;
+
+    const trackCombat = (action) =>
+      telemetry.track(EVENT_TYPES.COMBAT_ACTION, {
+        faction_id: currentFactionId,
+        race_id: currentRaceId,
+        action,
+        weapon: weaponCtrl?.equippedWeaponType || null,
+        mode: weaponCtrl?.mode || null,
+      });
+
+    switch (e.code) {
+      case "Digit1":
+        weaponCtrl.triggerAction("slot1");
+        trackCombat("slot1");
+        break;
+      case "Digit2":
+        weaponCtrl.triggerAction("slot2");
+        trackCombat("slot2");
+        break;
+      case "Digit3":
+        weaponCtrl.triggerAction("slot3");
+        trackCombat("slot3");
+        break;
+      case "Digit4":
+        weaponCtrl.triggerAction("slot4");
+        trackCombat("slot4");
+        break;
+      case "KeyQ":
+        weaponCtrl.triggerAction("block");
+        trackCombat("block");
+        break;
+      case "KeyE":
+        weaponCtrl.triggerAction("dodge");
+        trackCombat("dodge");
+        break;
+      case "KeyZ": // Z-key combat mechanic
+        updateStatus("⚡ Battle Cry!");
+        weaponCtrl.triggerAction("slot4");
+        trackCombat("battle_cry");
+        break;
+      case "Tab":
+        e.preventDefault();
+        weaponCtrl.toggleMode();
+        buildHotbarUI();
+        trackCombat("toggle_mode");
+        break;
+      case "KeyX":
+        weaponCtrl.sheathWeapon();
+        buildHotbarUI();
+        trackCombat("sheath");
+        break;
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "KeyQ" && weaponCtrl) {
+      weaponCtrl.releaseBlock();
+    }
+  });
+}
+
+function buildHotbarUI() {
+  const container = document.getElementById('hotbarDisplay');
+  if (!container) return;
+
+  if (!weaponCtrl || !weaponCtrl.equippedWeaponType) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:.7rem;">Equip a weapon to see hotbar</p>';
+    return;
+  }
+
+  const hotbar = weaponCtrl.getHotbar();
+  if (!hotbar) { container.innerHTML = ''; return; }
+
+  const modeLabel = weaponCtrl.mode === 'combat' ? '⚔️ Combat' : '🪨 Harvest';
+  const stateLabel = weaponCtrl.state;
+  const wpnName = WEAPON_TYPES[weaponCtrl.equippedWeaponType]?.name || weaponCtrl.equippedWeaponType;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:.7rem;color:var(--accent);">${wpnName}</span>
+      <span style="font-size:.6rem;color:var(--muted);">${modeLabel} • ${stateLabel}</span>
+      <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">Tab=mode X=sheath</span>
+    </div>
+    <div style="display:flex;gap:3px;">
+      ${['slot1','slot2','slot3','slot4'].map((key, i) => {
+        const a = hotbar[key];
+        return `<button class="action-btn" onclick="window._wc?.triggerAction('${key}')" style="flex:1;font-size:.65rem;" title="Key ${i+1}">
+          <b>${i+1}</b> ${a?.name || '—'}
+        </button>`;
+      }).join('')}
+      <button class="action-btn" onclick="window._wc?.triggerAction('block')" style="font-size:.65rem;" title="Hold Q">
+        Q ${hotbar.block?.name || 'Block'}
+      </button>
+      <button class="action-btn" onclick="window._wc?.triggerAction('dodge')" style="font-size:.65rem;" title="E">
+        E ${hotbar.dodge?.name || 'Dodge'}
+      </button>
+    </div>
+  `;
+
+  // Expose controller for hotbar button onclick
+  window._wc = weaponCtrl;
+}

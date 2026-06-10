@@ -1,0 +1,23 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grudge-studio.com/schemas/grudge-events.schema.json",
+  "title": "grudge_events",
+  "description": "Cloudflare Pipelines stream schema for grudge-character-creator telemetry. Records land in r2://grudge-events as Parquet+zstd, partitioned by date.",
+  "type": "object",
+  "required": ["event_type", "ts"],
+  "additionalProperties": false,
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": ["character_save","character_update","character_delete","character_active","equipment_change","weapon_equip","combat_action","asset_load","session_start","session_end","pipeline_smoke_test"]
+    },
+    "ts": { "type": "integer", "description": "Server-stamped epoch milliseconds." },
+    "session_id": { "type": ["string","null"], "maxLength": 64 },
+    "grudge_id":  { "type": ["string","null"], "maxLength": 64 },
+    "faction_id": { "type": ["string","null"], "maxLength": 32 },
+    "race_id":    { "type": ["string","null"], "maxLength": 32 },
+    "slot":       { "type": ["string","null"], "maxLength": 32 },
+    "variant":    { "type": ["string","null"], "maxLength": 64 },
+    "payload":    { "type": ["object","null"], "description": "Free-form per-event detail." }
+  }
+}

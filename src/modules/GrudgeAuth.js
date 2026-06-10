@@ -1,23 +1,27 @@
 /**
  * GrudgeAuth — Authentication via the Grudge backend (api.grudge-studio.com).
  *
- * Replaces the old Puter-based ApiClient. Supports:
+ * Supports:
  *   - Guest account creation (auto Grudge UUID)
+ *   - Puter identity bridge: pass puterId to bind a Puter account to a Grudge JWT
  *   - Discord OAuth redirect
  *   - Google OAuth redirect
  *   - Solana Web3Auth (future)
  *
- * Character CRUD goes through the Grudge backend, not Puter KV.
+ * Character CRUD goes through the Grudge backend.
  *
  * Usage:
  *   import { grudgeAuth } from './GrudgeAuth.js';
- *   await grudgeAuth.loginAsGuest();
+ *   await grudgeAuth.loginAsGuest('Warlord', puterUserId); // Puter bridge
+ *   await grudgeAuth.loginAsGuest();                       // plain guest
  *   const chars = await grudgeAuth.listCharacters();
  */
 
 import { GRUDGE_API } from './AssetConfig.js';
 
 const TOKEN_KEY = 'grudge_token';
+// OAuth users get localStorage (survives tab close); guests get sessionStorage (ephemeral)
+const STORAGE_KEY_PERSISTENT = 'grudge_token_persist';
 const MAX_CHARACTERS = 20;
 
 class GrudgeAuth extends EventTarget {
@@ -58,18 +62,19 @@ class GrudgeAuth extends EventTarget {
 
   // ── Initialize — restore session from stored token ────────
   async init() {
+    // Check persistent store first (OAuth users), then ephemeral (guests)
+    const stored = localStorage.getItem(STORAGE_KEY_PERSISTENT) || sessionStorage.getItem(TOKEN_KEY);
+    if (!stored) return null;
     try {
-      const stored = sessionStorage.getItem(TOKEN_KEY);
-      if (stored) {
-        this._token = stored;
-        const data = await this._fetch('/api/auth/me');
-        this.user = data.user;
-        this._ready = true;
-        this.dispatchEvent(new CustomEvent('login', { detail: this.user }));
-        return this.user;
-      }
+      this._token = stored;
+      const data = await this._fetch('/api/auth/me');
+      this.user = data.user;
+      this._ready = true;
+      this.dispatchEvent(new CustomEvent('login', { detail: this.user }));
+      return this.user;
     } catch {
-      // Token expired or invalid — clear and continue
+      // Token expired or invalid — clear both stores
+      localStorage.removeItem(STORAGE_KEY_PERSISTENT);
       sessionStorage.removeItem(TOKEN_KEY);
       this._token = null;
     }
@@ -77,10 +82,14 @@ class GrudgeAuth extends EventTarget {
   }
 
   // ── Guest login — auto-creates Grudge UUID ────────────────
-  async loginAsGuest(displayName) {
+  // puterId: optional Puter user UUID — binds Puter identity to the Grudge JWT
+  async loginAsGuest(displayName, puterId) {
     const data = await this._fetch('/api/auth/guest', {
       method: 'POST',
-      body: JSON.stringify({ displayName: displayName || undefined }),
+      body: JSON.stringify({
+        displayName: displayName || undefined,
+        puterId: puterId || undefined,
+      }),
     });
 
     this._token = data.token;
@@ -110,7 +119,8 @@ class GrudgeAuth extends EventTarget {
     if (!token) return null;
 
     this._token = token;
-    sessionStorage.setItem(TOKEN_KEY, token);
+    // OAuth users (Discord/Google) get persistent storage across tab closes
+    localStorage.setItem(STORAGE_KEY_PERSISTENT, token);
 
     // Clean URL
     const clean = window.location.pathname;
@@ -129,6 +139,7 @@ class GrudgeAuth extends EventTarget {
     this._token = null;
     this._ready = false;
     sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(STORAGE_KEY_PERSISTENT);
     this.dispatchEvent(new Event('logout'));
   }
 

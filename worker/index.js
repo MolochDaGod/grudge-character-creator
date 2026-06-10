@@ -17,10 +17,16 @@ const ASSET_VERSION = 'v2';  // Bump when re-uploading textures to bust CDN cach
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Cache-Control': 'public, max-age=300',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+/** JSON with caching for reads, no-cache for writes */
+function corsHeaders(cacheable = true) {
+  return cacheable
+    ? { ...CORS_HEADERS, 'Cache-Control': 'public, max-age=300' }
+    : CORS_HEADERS;
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -83,9 +89,56 @@ export default {
         return json({ packs: results });
       }
 
+      // ── Bone weapon attachments ──
+      const attachListMatch = path.match(/^\/api\/weapon-attachments\/([^/]+)$/);
+      if (request.method === 'GET' && attachListMatch) {
+        const { results } = await env.DB.prepare(
+          'SELECT * FROM weapon_bone_attachments WHERE model_id = ? ORDER BY created_at DESC'
+        ).bind(attachListMatch[1]).all();
+        return json({ attachments: results });
+      }
+
+      if (request.method === 'POST' && path === '/api/weapon-attachments') {
+        const body = await request.json();
+        const id = crypto.randomUUID();
+        const { model_id, bone_name, weapon_url, weapon_name, slot_label,
+                pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, scale } = body;
+        if (!model_id || !bone_name || !weapon_url) {
+          return json({ error: 'model_id, bone_name, weapon_url required' }, 400);
+        }
+        await env.DB.prepare(
+          `INSERT INTO weapon_bone_attachments (id, model_id, bone_name, weapon_url, weapon_name, slot_label, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, scale)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(id, model_id, bone_name, weapon_url, weapon_name || '', slot_label || 'custom',
+          pos_x || 0, pos_y || 0, pos_z || 0, rot_x || 0, rot_y || 0, rot_z || 0, scale || 1.0
+        ).run();
+        return json({ id, ...body }, 201);
+      }
+
+      if (request.method === 'PUT' && path.startsWith('/api/weapon-attachments/')) {
+        const attachId = path.split('/').pop();
+        const body = await request.json();
+        const fields = [];
+        const values = [];
+        for (const key of ['bone_name','weapon_url','weapon_name','slot_label','pos_x','pos_y','pos_z','rot_x','rot_y','rot_z','scale']) {
+          if (body[key] !== undefined) { fields.push(`${key} = ?`); values.push(body[key]); }
+        }
+        if (fields.length === 0) return json({ error: 'No fields to update' }, 400);
+        fields.push("updated_at = datetime('now')");
+        values.push(attachId);
+        await env.DB.prepare(`UPDATE weapon_bone_attachments SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
+        return json({ id: attachId, updated: true });
+      }
+
+      if (request.method === 'DELETE' && path.startsWith('/api/weapon-attachments/')) {
+        const attachId = path.split('/').pop();
+        await env.DB.prepare('DELETE FROM weapon_bone_attachments WHERE id = ?').bind(attachId).run();
+        return json({ deleted: attachId });
+      }
+
       // ── Health check ──
       if (path === '/health' || path === '/') {
-        return json({ status: 'ok', service: 'grudge-models', version: '1.0.0' });
+        return json({ status: 'ok', service: 'grudge-models', version: '2.0.0' });
       }
 
       return json({ error: 'Not found' }, 404);
