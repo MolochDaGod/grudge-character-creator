@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { SkeletonHelper } from 'three';
 import { loadModel, loadModelFromFile, loadAnimationClips, prepareModel, fbxLoader, initKTX2, SUPPORTED_EXTENSIONS } from './modules/SmartLoader.js';
 
 import { EquipmentManager } from './modules/EquipmentManager.js';
@@ -543,7 +542,7 @@ function setupAdminPanel() {
       let skeleton = null;
       currentModel.traverse(c => { if (c.isSkinnedMesh && !skeleton) skeleton = c; });
       if (skeleton) {
-        skeletonHelper = new SkeletonHelper(currentModel);
+      skeletonHelper = new THREE.SkeletonHelper(currentModel);
         scene.add(skeletonHelper);
       }
     }
@@ -613,7 +612,6 @@ function updateStatus(msg) {
 // Render Loop
 // ════════════════════════════════════════════════════════════
 function animate() {
-  requestAnimationFrame(animate);
   const dt = clock.getDelta();
   controls.update();
   if (mixer) mixer.update(dt);
@@ -1020,7 +1018,7 @@ async function boot() {
   buildMasteryPanel();
   setupCombatHotkeys();
   setupPersistence();
-  animate();
+  renderer.setAnimationLoop(animate);
   updateStatus('Ready — select a faction race to load');
   initPersistence();
 }
