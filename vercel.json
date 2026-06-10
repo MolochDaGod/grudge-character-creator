@@ -1,7 +1,10 @@
 {
   "buildCommand": "",
-  "outputDirectory": "_gametest_deploy",
+  "outputDirectory": "dist",
   "framework": null,
+  "redirects": [
+    { "source": "/", "destination": "/game/", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
     { "source": "/api/characters/:path*", "destination": "https://api.grudge-studio.com/api/characters/:path*" },
@@ -10,7 +13,7 @@
     { "source": "/api/manifest", "destination": "https://models.grudge-studio.com/api/manifest" },
     { "source": "/api/weapons", "destination": "https://models.grudge-studio.com/api/weapons" },
     { "source": "/api/:path*", "destination": "https://api.grudge-studio.com/api/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/game/:path*", "destination": "/game/index.html" }
   ],
   "headers": [
     {
