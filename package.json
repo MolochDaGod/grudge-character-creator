@@ -19,8 +19,7 @@
     "d1:init": "npx wrangler d1 execute grudge-models --file=d1/schema.sql",
     "d1:init:local": "npx wrangler d1 execute grudge-models --local --file=d1/schema.sql",
     "worker:dev": "npx wrangler dev",
-    "worker:deploy": "npx wrangler deploy",
-    "deploy:puter": "npm run build && node scripts/deploy-puter.mjs"
+    "worker:deploy": "npx wrangler deploy"
   },
   "dependencies": {
     "compression": "^1.8.1",

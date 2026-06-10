@@ -69,29 +69,12 @@ export const FACTIONS = {
       human: {
         name: 'Human (WK)',
         prefix: 'WK_',
-        // Real path: F:\Documents\Toon_RTS\Toon_RTS\WesternKingdoms\models\
         model: `${BASE}/WesternKingdoms/models/WK_Characters_customizable.FBX`,
       },
       barbarian: {
         name: 'Barbarian (BRB)',
         prefix: 'BRB_',
-        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Barbarians\models\
         model: `${BASE}/Barbarians/models/BRB_Characters_customizable.FBX`,
-      },
-      knight: {
-        name: 'Eternal Knight',
-        prefix: '',
-        model: `${MODELS}/eternal_knight/scene.gltf`,
-      },
-      gladiator: {
-        name: 'Human Gladiator',
-        prefix: '',
-        model: `${MODELS}/human_gladiator/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
-      },
-      squire: {
-        name: 'Squire',
-        prefix: '',
-        model: `${MODELS}/squire/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
       },
     },
   },
@@ -103,19 +86,12 @@ export const FACTIONS = {
       elf: {
         name: 'Elf (ELF)',
         prefix: 'ELF_',
-        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Elves\models\
         model: `${BASE}/Elves/models/ELF_Characters_customizable.FBX`,
       },
       dwarf: {
         name: 'Dwarf (DWF)',
         prefix: 'DWF_',
-        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Dwarves\models\
         model: `${BASE}/Dwarves/models/DWF_Characters_customizable.FBX`,
-      },
-      goblin: {
-        name: 'Goblin',
-        prefix: '',
-        model: `${MODELS}/goblin/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
       },
     },
   },
@@ -127,46 +103,12 @@ export const FACTIONS = {
       orc_classic: {
         name: 'Orc (ORC)',
         prefix: 'ORC_',
-        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Orcs\models\
         model: `${BASE}/Orcs/models/ORC_Characters_Customizable.FBX`,
       },
       undead: {
         name: 'Undead (UD)',
         prefix: 'UD_',
-        // Real path: F:\Documents\Toon_RTS\Toon_RTS\Undead\models\
         model: `${BASE}/Undead/models/UD_Characters_customizable.FBX`,
-      },
-      orc: {
-        name: 'Orc',
-        prefix: '',
-        model: `${MODELS}/orc_base/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
-      },
-      orc_grunt: {
-        name: 'Orc Grunt',
-        prefix: '',
-        model: `${MODELS}/orc_grunt/Meshy_AI_biped/Meshy_AI_Character_output.glb`,
-      },
-    },
-  },
-
-  worge: {
-    name: 'Worge',
-    color: '#d97706',
-    races: {
-      werewolf: {
-        name: 'Werewolf',
-        prefix: '',
-        model: `${MODELS}/worge_forms/werewolf/scene.gltf`,
-      },
-      warbear: {
-        name: 'Warbear',
-        prefix: '',
-        model: `${MODELS}/worge_forms/warbear/scene.gltf`,
-      },
-      raptor: {
-        name: 'Raptor',
-        prefix: '',
-        model: `${MODELS}/worge_forms/raptor/scene.gltf`,
       },
     },
   },

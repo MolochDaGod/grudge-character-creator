@@ -1,15 +1,31 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 dist-models/
+
+# Vercel
 .vercel/
+
+# Environment
 .env
 .env.local
+.env*.local
+.dev.vars
+
+# Editor / IDE
+.history/
+.vscode/
+
+# Wrangler
+.wrangler/
+
+# Large 3D assets (loaded locally, too big for git)
 *.tga
 *.FBX
 *.fbx
 *.meta
-
-# Large 3D assets (loaded locally, too big for git)
 environment/boss_wukong/
 environment/scary_forest/
 Toon_RTS.zip
@@ -17,11 +33,6 @@ Toon_RTS.zip
 # D1 temp files
 d1/_seed_batch.sql
 
-# Stale nested copy
-grudge-character-creator/
-
-# Wrangler
-.wrangler/
-.dev.vars
+# Temp deploy staging
+_gametest_deploy/
 .vercel
-.env*.local

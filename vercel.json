@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
+  "buildCommand": "",
+  "outputDirectory": "_gametest_deploy",
+  "framework": null,
   "rewrites": [
     { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
     { "source": "/api/characters/:path*", "destination": "https://api.grudge-studio.com/api/characters/:path*" },

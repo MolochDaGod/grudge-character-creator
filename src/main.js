@@ -496,6 +496,15 @@ function recalcStats() {
     }).join('');
     return `<div style="grid-column:1/-1;font-size:.65rem;color:var(--muted);padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">${sec.title}</div>${rows}`;
   }).join('');
+
+  // Header HP/MP/SP resource bars (character sheet: current = max).
+  const setResLbl = (id, label, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `${label} ${Math.round(val)}`;
+  };
+  setResLbl('resHPLbl', 'HP', character.stats.maxHP ?? 0);
+  setResLbl('resMPLbl', 'MP', character.stats.maxMana ?? 0);
+  setResLbl('resSPLbl', 'SP', character.stats.maxStamina ?? 0);
 }
 
 // Combat test
@@ -1078,25 +1087,24 @@ function buildHotbarUI() {
   const stateLabel = weaponCtrl.state;
   const wpnName = WEAPON_TYPES[weaponCtrl.equippedWeaponType]?.name || weaponCtrl.equippedWeaponType;
 
+  const slot = (key, keyLabel, fallback) => {
+    const a = hotbar[key];
+    const filled = !!a?.name;
+    const name = filled ? a.name : (fallback || '');
+    return `<div class="hb-slot${filled ? '' : ' empty'}" onclick="window._wc?.triggerAction('${key}')" title="${name || keyLabel}">
+      <span class="key">${keyLabel}</span><span>${name}</span>
+    </div>`;
+  };
+
   container.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <span style="font-size:.7rem;color:var(--accent);">${wpnName}</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:.72rem;color:var(--accent);font-family:var(--font-serif);text-transform:uppercase;letter-spacing:.5px;">${wpnName}</span>
       <span style="font-size:.6rem;color:var(--muted);">${modeLabel} • ${stateLabel}</span>
-      <span style="font-size:.6rem;color:var(--muted);margin-left:auto;">Tab=mode X=sheath</span>
+      <span style="font-size:.58rem;color:var(--muted);margin-left:auto;">Tab=mode • X=sheath</span>
     </div>
-    <div style="display:flex;gap:3px;">
-      ${['slot1','slot2','slot3','slot4'].map((key, i) => {
-        const a = hotbar[key];
-        return `<button class="action-btn" onclick="window._wc?.triggerAction('${key}')" style="flex:1;font-size:.65rem;" title="Key ${i+1}">
-          <b>${i+1}</b> ${a?.name || '—'}
-        </button>`;
-      }).join('')}
-      <button class="action-btn" onclick="window._wc?.triggerAction('block')" style="font-size:.65rem;" title="Hold Q">
-        Q ${hotbar.block?.name || 'Block'}
-      </button>
-      <button class="action-btn" onclick="window._wc?.triggerAction('dodge')" style="font-size:.65rem;" title="E">
-        E ${hotbar.dodge?.name || 'Dodge'}
-      </button>
+    <div class="hotbar">
+      ${slot('slot1', '1')}${slot('slot2', '2')}${slot('slot3', '3')}${slot('slot4', '4')}
+      ${slot('block', 'Q', 'Block')}${slot('dodge', 'E', 'Dodge')}
     </div>
   `;
 
