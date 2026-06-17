@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GRUDGE — Weapons Mastery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0705;--panel:#140d08;--card:#1e1510;--border:#3a2a1a;--border2:#7a5c1e;
+  --gold:#d4a400;--muted:#9b7d52;--dim:#6b5535;--text:#e7d8be;
+  --font:'Cinzel',Georgia,serif;--font-body:system-ui,-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.55;padding:32px 20px 64px;max-width:1180px;margin:0 auto}
+h1{font-family:var(--font);font-size:34px;color:var(--gold);letter-spacing:1px}
+h2{font-family:var(--font);letter-spacing:.5px}
+.lede{color:var(--muted);font-size:14px;margin:6px 0 24px;max-width:760px}
+.rules{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+.rule{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:150px}
+.rule strong{display:block;font-family:var(--font);font-size:22px;color:var(--gold)}
+.rule span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.trees{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.tree{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.tree-head{padding:14px 16px;border-bottom:2px solid var(--border)}
+.tree-head h2{font-size:19px}
+.tree-head p{font-size:12px;color:var(--muted);margin-top:2px}
+.tree-cap{font-size:11px;color:var(--dim);margin-top:6px;font-family:var(--font-mono)}
+.chart{position:relative;margin:8px}
+.edges{position:absolute;inset:0;pointer-events:none}
+.node{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:2}
+.node-micro{z-index:1}
+.orb{border:2px solid var(--border2);border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e1510,#120c07);margin:0 auto;position:relative}
+.orb-micro{border-radius:8px;background:linear-gradient(135deg,#120c07,#0a0705);opacity:.92}
+.orb-sig{border-radius:50%}
+.orb .ranks{font-family:var(--font-mono);font-weight:700}
+.nlabel{font-family:var(--font);margin-top:8px;color:var(--text);line-height:1.2}
+.ndesc{color:var(--gold);margin-top:2px}
+.nmeta{font-size:9px;color:var(--dim);font-family:var(--font-mono)}
+.sig,.micro-tag{font-size:8px;text-transform:uppercase;letter-spacing:1px;font-weight:700;display:block;margin-top:2px}
+.micro-tag{color:var(--dim)}
+.legend{margin-top:40px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.legend p{color:var(--muted);font-size:13px;margin:6px 0 14px;max-width:720px}
+.legend table{width:100%;border-collapse:collapse;font-size:13px}
+.legend th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:6px 10px;border-bottom:1px solid var(--border)}
+.legend td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.legend code{font-family:var(--font-mono);color:var(--gold);font-size:12px}
+footer{margin-top:36px;color:var(--dim);font-size:11px;text-align:center}
+</style>
+</head>
+<body>
+  <h1>Weapons Mastery</h1>
+  <p class="lede">A point-allocation talent tree per weapon type. Spend a shared mastery pool — one point per character level — across any of the 9 trees. Each tree has 7 core nodes, 10 micro nodes for small passives/crits/procs, and a signature capstone (35 points to fully fill). This page is generated from the same shipped defs as the in-game tree.</p>
+  <div class="rules">
+    <div class="rule"><strong>100</strong><span>Shared pool cap</span></div>
+    <div class="rule"><strong>1 / level</strong><span>Points earned</span></div>
+    <div class="rule"><strong>9</strong><span>Weapon trees</span></div>
+    <div class="rule"><strong>35</strong><span>Pts per tree</span></div>
+    <div class="rule"><strong>1 / 3 / 5</strong><span>Core ranks</span></div>
+  </div>
+  <div class="trees">
+
+  <section class="tree" id="tree-swords">
+    <header class="tree-head" style="border-color:#7dd3fc">
+      <h2 style="color:#7dd3fc">Swords</h2>
+      <p>One-handed &amp; two-handed blades — the balanced duelist.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #7dd3fc14, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#7dd3fc55" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Honed Edge</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Tempered Steel</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Flurry</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Vital Strike</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Sundering Cuts</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Bloodletting</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#7dd3fc;box-shadow:0 0 10px #7dd3fc55">
+        <span class="ranks" style="color:#7dd3fc;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Master Swordsman</div>
+      <div class="ndesc" style="font-size:10px">+8% Critical Chance</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#7dd3fc">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Riposte</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — on successful block</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Edge Flow</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — after landing a crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Hemorrhage</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — bleed on crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Expose Seam</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — vs armored targets</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Duelist Poise</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — while above 75% HP</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Counter Cut</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — within 2s of parry</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Steel Grace</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — on kill</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Lethal Finesse</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — vs bleeding foes</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Blade Echo</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — second hit bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#7dd3fc99;box-shadow:0 0 6px #7dd3fc33">
+        <span class="ranks" style="color:#7dd3fc;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Finishing Thrust</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — vs targets under 25% HP</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-axes">
+    <header class="tree-head" style="border-color:#ef4444">
+      <h2 style="color:#ef4444">Axes</h2>
+      <p>One-handed &amp; two-handed axes — brutal, reckless damage.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #ef444414, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#ef444455" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Savage Swings</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Brutal Cleave</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Rending Blows</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Reckless Fury</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Gore Drinker</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Frenzied Chops</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#ef4444;box-shadow:0 0 10px #ef444455">
+        <span class="ranks" style="color:#ef4444;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Berserker's Edge</div>
+      <div class="ndesc" style="font-size:10px">+12% Damage</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#ef4444">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Deep Wound</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — chance to cause bleed</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Cleave Aftershock</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — splash on crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Blood Scent</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — vs bleeding targets</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Skull Splitter</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — vs stunned foes</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Rage Pulse</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — on taking damage</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Gore Fountain</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — on multi-hit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Wild Chop</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — first swing bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Executioner</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — vs low HP targets</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Fury Chain</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — stacking on kill</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#ef444499;box-shadow:0 0 6px #ef444433">
+        <span class="ranks" style="color:#ef4444;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Carnage Mark</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — marked target proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-hammers">
+    <header class="tree-head" style="border-color:#f59e0b">
+      <h2 style="color:#f59e0b">Hammers</h2>
+      <p>One-handed &amp; two-handed hammers — crushing, armor-shattering force.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #f59e0b14, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#f59e0b55" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Crushing Blow</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Plate Breaker</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Heavy Impact</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Concussive Strike</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Momentum</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Lifebreaker</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#f59e0b;box-shadow:0 0 10px #f59e0b55">
+        <span class="ranks" style="color:#f59e0b;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Earthshatter</div>
+      <div class="ndesc" style="font-size:10px">+20% Critical Damage</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#f59e0b">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Staggering Blow</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — chance to stagger</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Shockwave</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — AoE on heavy hit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Bone Crunch</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — vs armored foes</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Hammerfall</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — overhead slam bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Iron Temper</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — after blocking</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Crushing Rhythm</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — every 3rd swing</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Sunder Armor</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — stacking debuff</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Concussive Echo</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — on stagger proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Maul Momentum</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — while charging</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#f59e0b99;box-shadow:0 0 6px #f59e0b33">
+        <span class="ranks" style="color:#f59e0b;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Seismic Finish</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — finisher proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-guns">
+    <header class="tree-head" style="border-color:#94a3b8">
+      <h2 style="color:#94a3b8">Guns</h2>
+      <p>Firearms — armor-piercing precision at range.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #94a3b814, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#94a3b855" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Armor Piercer</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Steady Aim</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Rapid Fire</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Heavy Rounds</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Kill Shot</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Siphon Rounds</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#94a3b8;box-shadow:0 0 10px #94a3b855">
+        <span class="ranks" style="color:#94a3b8;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Deadeye</div>
+      <div class="ndesc" style="font-size:10px">+12% Armor Penetration</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#94a3b8">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Tracer Round</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — marks target</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Suppressed Shot</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — from stealth</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Ricochet</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — bounce proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Hot Brass</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — on reload cancel</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Armor Crack</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — stacking shred</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Headhunter</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — headshot bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Blood Ammo</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — on crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Burst Fire</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — 3-round burst</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Long Range</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — beyond 15m</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#94a3b899;box-shadow:0 0 6px #94a3b833">
+        <span class="ranks" style="color:#94a3b8;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Coup de Grace</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — vs marked target</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-bows">
+    <header class="tree-head" style="border-color:#22c55e">
+      <h2 style="color:#22c55e">Bows</h2>
+      <p>Bows — agile, fast-firing marksmanship.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #22c55e14, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#22c55e55" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Quick Draw</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Eagle Eye</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Power Shot</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Vital Aim</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Bodkin Tips</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Leeching Arrows</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#22c55e;box-shadow:0 0 10px #22c55e55">
+        <span class="ranks" style="color:#22c55e;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Master Archer</div>
+      <div class="ndesc" style="font-size:10px">+8% Attack Speed</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#22c55e">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Pinning Shot</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — root on crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Volley Spark</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — after multishot</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Barbed Tip</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — DoT on hit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Wind Read</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — standing still</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Snap Draw</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — opening shot</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Heartseeker</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — max range bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Broadhead</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — vs shields</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Hunter Mark</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — marked prey</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Rapid Nock</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — on dodge</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#22c55e99;box-shadow:0 0 6px #22c55e33">
+        <span class="ranks" style="color:#22c55e;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Rain of Arrows</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — AoE proc chance</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-crossbows">
+    <header class="tree-head" style="border-color:#b45309">
+      <h2 style="color:#b45309">Crossbows</h2>
+      <p>Crossbows — heavy bolts that punch through armor.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #b4530914, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#b4530955" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Bolt Driver</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Punch Through</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Marksmanship</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Heavy Bolts</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Crank Loader</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Draining Bolts</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#b45309;box-shadow:0 0 10px #b4530955">
+        <span class="ranks" style="color:#b45309;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Siege Sniper</div>
+      <div class="ndesc" style="font-size:10px">+12% Armor Penetration</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#b45309">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Bolt Splinter</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — shred on hit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Crank Mastery</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — faster reload</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Breaching Bolt</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — vs cover</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Scope Glint</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — aimed shot</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Barbed Bolt</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — bleed proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Siege Load</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — charged shot</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Repeater</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — combo reload</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Weak Point</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — vs stunned</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Pierce Line</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — line shot</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#b4530999;box-shadow:0 0 6px #b4530933">
+        <span class="ranks" style="color:#b45309;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Execution Bolt</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — vs pinned foe</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-staves">
+    <header class="tree-head" style="border-color:#14b8a6">
+      <h2 style="color:#14b8a6">Staves</h2>
+      <p>Battle staves — disciplined, sweeping melee force.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #14b8a614, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#14b8a655" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Focused Force</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Keen Insight</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Empowered Strikes</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Whirling Staff</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Spirit Siphon</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Mind Over Armor</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#14b8a6;box-shadow:0 0 10px #14b8a655">
+        <span class="ranks" style="color:#14b8a6;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Staff Grandmaster</div>
+      <div class="ndesc" style="font-size:10px">+12% Damage</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#14b8a6">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Sweep Arc</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — wide swing bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Chi Focus</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — after meditation</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Pressure Point</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — debuff proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Flow State</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — combo chain</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Spirit Tap</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — on whirlwind</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Iron Body</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — while blocking</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Stunning Jab</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — stun proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Vault Strike</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — leap attack</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Deflect</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — after parry</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#14b8a699;box-shadow:0 0 6px #14b8a633">
+        <span class="ranks" style="color:#14b8a6;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Monk Finish</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — finisher combo</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-spears">
+    <header class="tree-head" style="border-color:#e879f9">
+      <h2 style="color:#e879f9">Spears</h2>
+      <p>Spears &amp; polearms — swift, impaling reach.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #e879f914, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#e879f955" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Swift Thrusts</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Impaling Force</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Precise Lunge</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Phalanx Pierce</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Skewer</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Bloodspear</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#e879f9;box-shadow:0 0 10px #e879f955">
+        <span class="ranks" style="color:#e879f9;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Dragoon's Reach</div>
+      <div class="ndesc" style="font-size:10px">+8% Attack Speed</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#e879f9">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Reach Advantage</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — max range bonus</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Impale</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — on lunge</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Phalanx Wall</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — vs groups</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Skewering Run</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — while sprinting</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Bleeding Thrust</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — pierce bleed</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Brace</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — counter-thrust</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Dragonfly</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — evade then strike</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Line Breaker</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — shield bypass</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Pole Vault</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — gap closer</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#e879f999;box-shadow:0 0 6px #e879f933">
+        <span class="ranks" style="color:#e879f9;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Heart Lance</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — rear attack</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  <section class="tree" id="tree-staffs">
+    <header class="tree-head" style="border-color:#a855f7">
+      <h2 style="color:#a855f7">Staffs</h2>
+      <p>Arcane staffs — bursting spellcraft and soul-draining magic.</p>
+      <div class="tree-cap">Fully fills at <strong>35</strong> points (7 core + 10 micro + signature)</div>
+    </header>
+    <div class="chart" style="height:480px;background:radial-gradient(circle at 50% 38%, #a855f714, transparent 70%)">
+      <svg class="edges" width="100%" height="100%"><line x1="18%" y1="10%" x2="50%" y2="30%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="10%" x2="50%" y2="30%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="18%" y2="50%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="30%" x2="82%" y2="50%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="50%" x2="50%" y2="70%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="82%" y1="50%" x2="50%" y2="70%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="50%" y1="70%" x2="50%" y2="90%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="4 4"/><line x1="18%" y1="10%" x2="6%" y2="14%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="10%" x2="6%" y2="22%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="30%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="30%" x2="6%" y2="38%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="18%" y1="50%" x2="6%" y2="46%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="14%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="82%" y1="50%" x2="94%" y2="22%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="30%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="70%" x2="94%" y2="38%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/><line x1="50%" y1="90%" x2="94%" y2="46%" stroke="#a855f755" stroke-width="1.5" stroke-dasharray="2 3"/></svg>
+      
+    <div class="node " style="left:18%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Arcane Surge</div>
+      <div class="ndesc" style="font-size:10px">+5% Critical Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:10%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Mana Burn</div>
+      <div class="ndesc" style="font-size:10px">+3% Damage per rank</div>
+      <div class="nmeta">no requirement</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:30%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Spell Crit</div>
+      <div class="ndesc" style="font-size:10px">+2% Critical Chance per rank</div>
+      <div class="nmeta">req 5 pts</div>
+      
+    </div>
+    <div class="node " style="left:18%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Soul Tap</div>
+      <div class="ndesc" style="font-size:10px">+2% Lifesteal per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:82%;top:50%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">3</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Quickcast</div>
+      <div class="ndesc" style="font-size:10px">+2% Attack Speed per rank</div>
+      <div class="nmeta">req 10 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:70%;width:52px">
+      <div class="orb" style="width:52px;height:52px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">5</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Mage Ward Pierce</div>
+      <div class="ndesc" style="font-size:10px">+3% Armor Penetration per rank</div>
+      <div class="nmeta">req 16 pts</div>
+      
+    </div>
+    <div class="node " style="left:50%;top:90%;width:64px">
+      <div class="orb orb-sig" style="width:64px;height:64px;border-color:#a855f7;box-shadow:0 0 10px #a855f755">
+        <span class="ranks" style="color:#a855f7;font-size:13px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:11px">Archmage's Fury</div>
+      <div class="ndesc" style="font-size:10px">+20% Critical Damage</div>
+      <div class="nmeta">req 22 pts</div>
+      <span class="sig" style="color:#a855f7">Signature</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Arcane Spark</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — spell hit proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Mana Siphon</div>
+      <div class="ndesc" style="font-size:8px">+1% Lifesteal — on spell crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Void Pierce</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — vs magic resist</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Overload</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — chance on cast</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:6%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Quick Sigil</div>
+      <div class="ndesc" style="font-size:8px">+1% Attack Speed — instant cast</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:14%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Soul Brand</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — marked by spell</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:22%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Frost Echo</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Chance — slow then crit</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:30%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Chaos Flux</div>
+      <div class="ndesc" style="font-size:8px">+1% Damage — random element</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:38%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Ward Breaker</div>
+      <div class="ndesc" style="font-size:8px">+1% Armor Penetration — strip ward</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    <div class="node node-micro" style="left:94%;top:46%;width:72px">
+      <div class="orb orb-micro" style="width:36px;height:36px;border-color:#a855f799;box-shadow:0 0 6px #a855f733">
+        <span class="ranks" style="color:#a855f7;font-size:10px">1</span>
+      </div>
+      <div class="nlabel" style="font-size:9px">Meteor Shard</div>
+      <div class="ndesc" style="font-size:8px">+1% Critical Damage — AoE crit proc</div>
+      
+      <span class="micro-tag">Micro</span>
+    </div>
+    </div>
+  </section>
+  </div>
+  <section class="legend">
+    <h2>Combat Bonuses</h2>
+    <p>Every talent grants a generic passive that folds straight into the character stat engine. Bonuses sum across all weapon trees.</p>
+    <table>
+      <thead><tr><th>Bonus</th><th>Stat key</th><th>Mode</th><th>Per rank</th></tr></thead>
+      <tbody>
+      <tr>
+        <td>Damage</td>
+        <td><code>damage</code></td>
+        <td>multiplicative</td>
+        <td>+3% / rank</td>
+      </tr>
+      <tr>
+        <td>Critical Chance</td>
+        <td><code>criticalChance</code></td>
+        <td>additive</td>
+        <td>+2% / rank</td>
+      </tr>
+      <tr>
+        <td>Critical Damage</td>
+        <td><code>criticalDamage</code></td>
+        <td>additive</td>
+        <td>+5% / rank</td>
+      </tr>
+      <tr>
+        <td>Attack Speed</td>
+        <td><code>attackSpeed</code></td>
+        <td>additive</td>
+        <td>+2% / rank</td>
+      </tr>
+      <tr>
+        <td>Armor Penetration</td>
+        <td><code>armorPenetration</code></td>
+        <td>additive</td>
+        <td>+3% / rank</td>
+      </tr>
+      <tr>
+        <td>Lifesteal</td>
+        <td><code>drainHealth</code></td>
+        <td>additive</td>
+        <td>+2% / rank</td>
+      </tr></tbody>
+    </table>
+  </section>
+  <footer>Generated from shared/definitions/weaponMastery.ts · run <code>npx tsx scripts/gen-weapon-mastery-html.mjs</code></footer>
+</body>
+</html>

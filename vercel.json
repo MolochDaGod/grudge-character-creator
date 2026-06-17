@@ -6,6 +6,8 @@
     { "source": "/", "destination": "/game/", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
+    { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
     { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
     { "source": "/api/characters/:path*", "destination": "https://api.grudge-studio.com/api/characters/:path*" },
     { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
@@ -13,6 +15,7 @@
     { "source": "/api/manifest", "destination": "https://models.grudge-studio.com/api/manifest" },
     { "source": "/api/weapons", "destination": "https://models.grudge-studio.com/api/weapons" },
     { "source": "/api/:path*", "destination": "https://api.grudge-studio.com/api/:path*" },
+    { "source": "/game/weapons", "destination": "/game/weapons-mastery.html" },
     { "source": "/game/:path*", "destination": "/game/index.html" }
   ],
   "headers": [

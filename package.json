@@ -19,7 +19,8 @@
     "d1:init": "npx wrangler d1 execute grudge-models --file=d1/schema.sql",
     "d1:init:local": "npx wrangler d1 execute grudge-models --local --file=d1/schema.sql",
     "worker:dev": "npx wrangler dev",
-    "worker:deploy": "npx wrangler deploy"
+    "worker:deploy": "npx wrangler deploy",
+    "sync:game-static": "node scripts/sync-static-game.mjs"
   },
   "dependencies": {
     "compression": "^1.8.1",
