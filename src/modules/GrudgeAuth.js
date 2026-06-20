@@ -11,6 +11,7 @@
  */
 
 import { GRUDGE_API } from './AssetConfig.js';
+import { loginWithGrudgeId } from './grudgeFleet.js';
 
 const TOKEN_KEY = 'grudge_token';
 const STORAGE_KEY_PERSISTENT = 'grudge_token_persist';
@@ -142,8 +143,22 @@ class GrudgeAuth extends EventTarget {
   }
 
   loginWithGrudgeId() {
-    const returnUrl = encodeURIComponent(window.location.href);
-    window.location.href = `${AUTH_GATEWAY}?redirect=${returnUrl}`;
+    loginWithGrudgeId(window.location.pathname + window.location.search);
+  }
+
+  async ensureWallet() {
+    if (!this._token) throw new Error('Not authenticated');
+    const status = await this._fetch('/api/wallet/status');
+    if (status.walletAddress) return status;
+    return this._fetch('/api/wallet/create', { method: 'POST', body: '{}' });
+  }
+
+  async mintCharacterCNFT(characterId, avatarUrl) {
+    if (!this._token) throw new Error('Not authenticated');
+    return this._fetch(`/api/characters/${characterId}/mint`, {
+      method: 'POST',
+      body: JSON.stringify({ avatarUrl }),
+    });
   }
 
   async handleOAuthCallback() {
