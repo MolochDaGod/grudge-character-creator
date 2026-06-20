@@ -8,8 +8,12 @@
   "rewrites": [
     { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
     { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
+    { "source": "/api/characters", "destination": "https://grudge-builder-production.up.railway.app/api/characters" },
+    { "source": "/api/characters/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/characters/:path*" },
+    { "source": "/api/wallet/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/wallet/:path*" },
+    { "source": "/api/auth/puter", "destination": "https://grudge-builder-production.up.railway.app/api/auth/puter" },
+    { "source": "/api/auth/session/exchange", "destination": "https://api.grudge-studio.com/api/auth/session/exchange" },
     { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
-    { "source": "/api/characters/:path*", "destination": "https://api.grudge-studio.com/api/characters/:path*" },
     { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
     { "source": "/api/weapon-attachments/:path*", "destination": "https://models.grudge-studio.com/api/weapon-attachments/:path*" },
     { "source": "/api/manifest", "destination": "https://models.grudge-studio.com/api/manifest" },

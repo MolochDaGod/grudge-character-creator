@@ -12,7 +12,8 @@
 
 const R2_BASE = import.meta.env.VITE_R2_BASE_URL || '';
 const MANIFEST_API = import.meta.env.VITE_MANIFEST_API || '';
-const GRUDGE_API = import.meta.env.VITE_GRUDGE_API || 'https://api.grudge-studio.com';
+/** Same-origin /api — Vercel rewrites route auth→id, characters→Railway */
+const GRUDGE_API = import.meta.env.VITE_GRUDGE_API || '';
 const LOCAL_ASSET_BASE = '/assets';
 
 /** True when running against R2 CDN (production) */
