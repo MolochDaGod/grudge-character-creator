@@ -193,13 +193,17 @@ class GrudgeAuth extends EventTarget {
 
   async createCharacter(character) {
     if (!this._token) throw new Error('Not authenticated');
+    const attrs = character.attrs || character.attributes || {};
     const body = {
       name: character.name,
       raceId: character.raceId || character.race,
       classId: character.classId || character.class || 'warrior',
       factionId: character.factionId,
       equipment: character.equipped || character.equipment || {},
-      attributes: character.attrs || character.attributes || {},
+      attributes: Object.keys(attrs).length ? attrs : {
+        Strength: 10, Vitality: 10, Endurance: 10, Intellect: 10,
+        Wisdom: 10, Dexterity: 10, Agility: 10, Tactics: 10,
+      },
       level: character.level || 1,
       gameOrigin: 'grudge6',
     };

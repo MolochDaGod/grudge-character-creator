@@ -3,9 +3,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
-  "redirects": [
-    { "source": "/", "destination": "/game/", "permanent": false }
-  ],
+  "redirects": [],
   "rewrites": [
     { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
     { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
