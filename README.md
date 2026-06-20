@@ -1,10 +1,27 @@
 # Grudge Character Creator
 
-R3F + Rapier 3D game client for [Grudge Studio](https://grudge-studio.com) — character creation, equipment loadouts, class/weapon skill trees, crafting, combat, and 3D world gameplay. Built by Racalvin The Pirate King.
+R3F + Rapier 3D game client for [Grudge Studio](https://grudge-studio.com) — character creation, equipment loadouts, class/weapon skill trees, crafting, combat, and 3D world gameplay. Built by Ra[...]
 
 **Live:** [grudge-character-creator.vercel.app/game/](https://grudge-character-creator.vercel.app/game/)
 **Manifest API:** [models.grudge-studio.com](https://models.grudge-studio.com/health)
 **Assets CDN:** [assets.grudge-studio.com](https://assets.grudge-studio.com)
+
+## Install
+
+> **Canonical source:** This repo is the source of truth. Do not use `npm i grudge-studio` — that package is not official.
+
+```bash
+# Pin to latest stable commit
+npm i github:MolochDaGod/grudge-character-creator#d935a5974f0a10438e2355e7b9e0d838ec54c80d
+```
+
+Or clone directly:
+
+```bash
+git clone https://github.com/MolochDaGod/grudge-character-creator.git
+cd grudge-character-creator
+npm install
+```
 
 ## Stack
 
