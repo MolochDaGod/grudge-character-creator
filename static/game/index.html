@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grudge Studio — Game Hub</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/grudge-icon-32x32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #070a12;
+      --panel: #10182a;
+      --card: #141f35;
+      --border: #2a3a5c;
+      --gold: #d4a400;
+      --accent: #6ee7b7;
+      --muted: #8fa3c7;
+      --text: #e8eaf6;
+      --danger: #f87171;
+    }
+    body {
+      font-family: 'Jost', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .bg-glow {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(110,231,183,.12), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 50%, rgba(212,164,0,.06), transparent);
+    }
+    .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 20px 64px; }
+    header {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+    }
+    .logo { font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--gold); letter-spacing: 1px; }
+    .tagline { color: var(--muted); font-size: .85rem; flex: 1; min-width: 200px; }
+    .auth-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(0,0,0,.3); color: var(--text); font-size: .85rem;
+      cursor: pointer; transition: all .2s; font-family: inherit;
+    }
+    .btn:hover { border-color: var(--accent); background: rgba(110,231,183,.08); }
+    .btn-primary { background: linear-gradient(135deg, rgba(212,164,0,.25), rgba(110,231,183,.15)); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+    .btn-primary:hover { border-color: var(--accent); color: var(--accent); }
+    .user-pill {
+      padding: 6px 12px; border-radius: 20px; background: rgba(110,231,183,.1);
+      border: 1px solid rgba(110,231,183,.3); color: var(--accent); font-size: .8rem;
+    }
+    h2 { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); margin-bottom: 16px; letter-spacing: .5px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .card {
+      background: linear-gradient(145deg, var(--card), var(--panel));
+      border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+      transition: all .25s; display: flex; flex-direction: column; gap: 10px;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .card.live { border-left: 3px solid var(--accent); }
+    .card.external { border-left: 3px solid var(--gold); }
+    .card h3 { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--text); }
+    .card p { color: var(--muted); font-size: .82rem; flex: 1; }
+    .card .launch {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 4px;
+      color: var(--accent); font-size: .85rem; font-weight: 600; text-decoration: none;
+    }
+    .card .launch:hover { color: var(--gold); }
+    .badge {
+      display: inline-block; font-size: .65rem; text-transform: uppercase; letter-spacing: 1px;
+      padding: 2px 8px; border-radius: 4px; background: rgba(110,231,183,.15); color: var(--accent);
+    }
+    .badge.fleet { background: rgba(212,164,0,.15); color: var(--gold); }
+    .systems {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+    }
+    .systems ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .systems li { font-size: .8rem; color: var(--muted); padding: 6px 0; border-bottom: 1px solid rgba(42,58,92,.5); }
+    .systems li strong { color: var(--text); }
+    footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .75rem; }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="wrap">
+    <header>
+      <div class="logo">GRUDGE STUDIO</div>
+      <div class="tagline">Character systems, combat codex, and fleet launchers</div>
+      <div class="auth-bar" id="authBar">
+        <button class="btn btn-primary" id="grudgeIdBtn">Sign in with Grudge ID</button>
+      </div>
+    </header>
+
+    <h2>Launch</h2>
+    <div class="grid">
+      <article class="card live">
+        <span class="badge">Live</span>
+        <h3>Character Creator</h3>
+        <p>3D race builder — 6 factions, equipment slots, attributes, class &amp; weapon skill trees, combat test dummy.</p>
+        <a class="launch" href="/creator/">Open Creator →</a>
+      </article>
+
+      <article class="card external">
+        <span class="badge fleet">Fleet</span>
+        <h3>Warlords — Island 3D</h3>
+        <p>Full 3D island gameplay with grudge6 race models, harvesting, building, and combat.</p>
+        <a class="launch" href="https://client.grudge-studio.com/island-3d" target="_blank" rel="noopener">Enter Island →</a>
+      </article>
+
+      <article class="card external">
+        <span class="badge fleet">Fleet</span>
+        <h3>Warlords — Home Island</h3>
+        <p>2D island view, professions, crafting, and character management.</p>
+        <a class="launch" href="https://client.grudge-studio.com/home-island" target="_blank" rel="noopener">Home Island →</a>
+      </article>
+
+      <article class="card external">
+        <span class="badge fleet">Fleet</span>
+        <h3>Warlords — Play</h3>
+        <p>Main Warlords game shell — world map, sailing, PvE, and account-linked progression.</p>
+        <a class="launch" href="https://client.grudge-studio.com/play" target="_blank" rel="noopener">Play Warlords →</a>
+      </article>
+
+      <article class="card live">
+        <span class="badge">Live</span>
+        <h3>Weapons Mastery Codex</h3>
+        <p>9 weapon talent trees — shared mastery pool, core nodes, micro passives, and signature capstones.</p>
+        <a class="launch" href="/game/weapons">View Trees →</a>
+      </article>
+
+      <article class="card external">
+        <span class="badge fleet">Fleet</span>
+        <h3>Survival ARPG</h3>
+        <p>Top-down survival action RPG on the Grudges fleet deployment.</p>
+        <a class="launch" href="https://grudges.grudge-studio.com/arpg-game/" target="_blank" rel="noopener">Play ARPG →</a>
+      </article>
+    </div>
+
+    <div class="systems">
+      <h2>Game Systems</h2>
+      <ul>
+        <li><strong>Panel</strong> — Equipment, stats, skills, crafting, quests</li>
+        <li><strong>World</strong> — R3F + Rapier 3D combat arena</li>
+        <li><strong>Foundry</strong> — T0–T8 crafting workbench</li>
+        <li><strong>Harvest</strong> — Mining, foresting, mystic, chef, engineer</li>
+        <li><strong>Classes</strong> — Warrior, Ranger, Mage, Worge</li>
+        <li><strong>Combat</strong> — 8 attributes → 37 derived stats</li>
+        <li><strong>cNFT</strong> — Mint characters on Solana via fleet wallet</li>
+        <li><strong>D1 Manifest</strong> — models.grudge-studio.com asset registry</li>
+      </ul>
+    </div>
+
+    <footer>Grudge Studio · grudge6.grudge-studio.com · Same Grudge ID across all fleet apps</footer>
+  </div>
+
+  <script type="module">
+    const AUTH_GATEWAY = 'https://id.grudge-studio.com';
+    const TOKEN_KEY = 'grudge_token_persist';
+
+    function loginWithGrudgeId() {
+      const redirectUri = encodeURIComponent(`${location.origin}/auth/callback?return=/game/`);
+      location.href = `${AUTH_GATEWAY}/login?redirect_uri=${redirectUri}`;
+    }
+
+    function logout() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('grudge_id');
+      localStorage.removeItem('grudge_username');
+      renderAuth();
+    }
+
+    async function checkSession() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return null;
+      try {
+        const resp = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!resp.ok) throw new Error('session expired');
+        const data = await resp.json();
+        return data.user || data;
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        return null;
+      }
+    }
+
+    function renderAuth(user) {
+      const bar = document.getElementById('authBar');
+      if (user) {
+        const name = user.displayName || user.username || user.grudgeId || 'Player';
+        bar.innerHTML = `
+          <span class="user-pill">${name}</span>
+          <button class="btn" id="logoutBtn">Sign out</button>
+        `;
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+      } else {
+        bar.innerHTML = `<button class="btn btn-primary" id="grudgeIdBtn">Sign in with Grudge ID</button>`;
+        document.getElementById('grudgeIdBtn').addEventListener('click', loginWithGrudgeId);
+      }
+    }
+
+    const user = await checkSession();
+    renderAuth(user);
+  </script>
+</body>
+</html>

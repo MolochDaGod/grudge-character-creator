@@ -73,6 +73,7 @@ function serveParentAssets() {
 }
 
 export default defineConfig({
+  base: '/creator/',
   root: '.',
   publicDir: 'public',
   plugins: [serveParentAssets()],
@@ -84,7 +85,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: 'dist/creator',
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {

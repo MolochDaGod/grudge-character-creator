@@ -948,15 +948,15 @@ function setupPersistence() {
 }
 
 async function initPersistence() {
-  const signInBtn = document.getElementById('signInBtn');
-  const discordBtn = document.getElementById('discordSignInBtn');
+  const grudgeIdBtn = document.getElementById('grudgeIdBtn');
+  const signOutBtn = document.getElementById('signOutBtn');
   const userDisplay = document.getElementById('userDisplay');
 
   async function onSignedIn(user) {
     try {
       userDisplay.textContent = user.displayName || user.grudgeId || '';
-      signInBtn.style.display = 'none';
-      if (discordBtn) discordBtn.style.display = 'none';
+      if (grudgeIdBtn) grudgeIdBtn.style.display = 'none';
+      if (signOutBtn) signOutBtn.style.display = '';
       await characterStore.load();
       buildSavedCharactersList();
       updateStatus('Signed in as ' + (user.displayName || user.grudgeId));
@@ -967,26 +967,28 @@ async function initPersistence() {
   }
 
   function showOffline() {
-    signInBtn.style.display = '';
-    if (discordBtn) discordBtn.style.display = '';
+    if (grudgeIdBtn) grudgeIdBtn.style.display = '';
+    if (signOutBtn) signOutBtn.style.display = 'none';
+    userDisplay.textContent = '';
     document.getElementById('savedCharactersList').innerHTML =
-      '<p style="color:var(--muted);font-size:.8rem;">Sign in to save characters</p>';
+      '<p style="color:var(--muted);font-size:.8rem;">Sign in with Grudge ID to save characters</p>';
   }
 
-  // Guest sign-in button
-  signInBtn.addEventListener('click', async () => {
-    try {
-      const user = await grudgeAuth.loginAsGuest();
-      await onSignedIn(user);
-    } catch (err) {
-      console.error('Sign-in failed:', err);
-      updateStatus('Sign-in failed: ' + err.message);
-    }
-  });
+  if (grudgeIdBtn) {
+    grudgeIdBtn.addEventListener('click', () => {
+      grudgeAuth.loginWithGrudgeId('/auth/callback?return=/creator/');
+    });
+  }
 
-  // Discord sign-in button
-  if (discordBtn) {
-    discordBtn.addEventListener('click', () => grudgeAuth.loginWithDiscord());
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', () => {
+      grudgeAuth.logout();
+      characterStore.characters = [];
+      characterStore.activeId = null;
+      buildSavedCharactersList();
+      showOffline();
+      updateStatus('Signed out');
+    });
   }
 
   // Handle OAuth callback (token in URL from Discord/Google redirect)

@@ -142,8 +142,8 @@ class GrudgeAuth extends EventTarget {
     window.location.href = `${AUTH_GATEWAY}/auth/google/start?returnUrl=${returnUrl}`;
   }
 
-  loginWithGrudgeId() {
-    loginWithGrudgeId(window.location.pathname + window.location.search);
+  loginWithGrudgeId(returnPath = '/auth/callback?return=/creator/') {
+    loginWithGrudgeId(returnPath);
   }
 
   async ensureWallet() {

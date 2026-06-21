@@ -3,10 +3,10 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
-  "redirects": [],
+  "redirects": [
+    { "source": "/", "destination": "/game/", "permanent": false }
+  ],
   "rewrites": [
-    { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
-    { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
     { "source": "/api/characters", "destination": "https://grudge-builder-production.up.railway.app/api/characters" },
     { "source": "/api/characters/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/characters/:path*" },
     { "source": "/api/wallet/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/wallet/:path*" },
@@ -24,6 +24,7 @@
     { "source": "/api/weapons", "destination": "https://models.grudge-studio.com/api/weapons" },
     { "source": "/api/:path*", "destination": "https://api.grudge-studio.com/api/:path*" },
     { "source": "/game/weapons", "destination": "/game/weapons-mastery.html" },
+    { "source": "/creator", "destination": "/creator/index.html" },
     { "source": "/game/:path*", "destination": "/game/index.html" }
   ],
   "headers": [

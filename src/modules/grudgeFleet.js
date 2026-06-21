@@ -23,6 +23,6 @@ export function fleetApi(path) {
 }
 
 export function loginWithGrudgeId(returnPath = '/auth/callback') {
-  const redirect = encodeURIComponent(`${window.location.origin}${returnPath}`);
-  window.location.href = `${AUTH_GATEWAY}?redirect=${redirect}`;
+  const redirectUri = encodeURIComponent(`${window.location.origin}${returnPath}`);
+  window.location.href = `${AUTH_GATEWAY}/login?redirect_uri=${redirectUri}`;
 }

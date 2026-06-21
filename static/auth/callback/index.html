@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grudge Studio — Signing in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #070a12; color: #e8eaf6; font-family: 'Jost', sans-serif;
+    }
+    .box { text-align: center; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid #2a3a5c; border-top-color: #6ee7b7;
+      border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-family: 'Cinzel', serif; font-size: 1rem; color: #6ee7b7; letter-spacing: 1px; }
+    p { color: #8fa3c7; font-size: .85rem; margin-top: 8px; }
+    .err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="spinner" id="spinner"></div>
+    <h1 id="title">Completing sign-in…</h1>
+    <p id="msg"></p>
+  </div>
+  <script type="module">
+    const TOKEN_KEY = 'grudge_token_persist';
+    const params = new URLSearchParams(location.search);
+    const returnTo = params.get('return') || '/game/';
+    const title = document.getElementById('title');
+    const msg = document.getElementById('msg');
+    const spinner = document.getElementById('spinner');
+
+    function fail(text) {
+      spinner.style.display = 'none';
+      title.textContent = 'Sign-in failed';
+      title.className = 'err';
+      msg.textContent = text;
+      setTimeout(() => { location.href = '/game/'; }, 2500);
+    }
+
+    async function bridgeLaunchToken(launchToken) {
+      const exchange = await fetch('/api/auth/session/exchange', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: launchToken, audience: location.origin }),
+      });
+      if (!exchange.ok) throw new Error('Token exchange failed');
+      const profile = await exchange.json();
+
+      const auth = await fetch('/api/auth/puter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          puterId: `grudge_${profile.grudgeId}`,
+          puterUuid: `grudge_${profile.grudgeId}`,
+          displayName: profile.displayName || profile.username,
+        }),
+      });
+      if (!auth.ok) throw new Error('Session bridge failed');
+      const data = await auth.json();
+      const token = data.token || data.sessionToken;
+      if (!token) throw new Error('No session token');
+      localStorage.setItem(TOKEN_KEY, token);
+      if (profile.grudgeId) localStorage.setItem('grudge_id', profile.grudgeId);
+      if (profile.username) localStorage.setItem('grudge_username', profile.username);
+      return profile;
+    }
+
+    try {
+      const launchToken = params.get('grudge_token');
+      const legacyToken = params.get('token') || params.get('sso_token');
+
+      if (launchToken) {
+        const profile = await bridgeLaunchToken(launchToken);
+        title.textContent = `Welcome, ${profile.displayName || profile.username || 'Player'}`;
+        msg.textContent = 'Redirecting…';
+        setTimeout(() => { location.href = returnTo; }, 600);
+      } else if (legacyToken) {
+        localStorage.setItem(TOKEN_KEY, legacyToken);
+        title.textContent = 'Signed in';
+        msg.textContent = 'Redirecting…';
+        setTimeout(() => { location.href = returnTo; }, 600);
+      } else if (localStorage.getItem(TOKEN_KEY)) {
+        location.href = returnTo;
+      } else {
+        fail('No auth token received');
+      }
+    } catch (err) {
+      fail(err.message || 'Unknown error');
+    }
+  </script>
+</body>
+</html>
