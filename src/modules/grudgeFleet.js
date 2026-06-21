@@ -26,3 +26,8 @@ export function loginWithGrudgeId(returnPath = '/auth/callback') {
   const redirectUri = encodeURIComponent(`${window.location.origin}${returnPath}`);
   window.location.href = `${AUTH_GATEWAY}/login?redirect_uri=${redirectUri}`;
 }
+
+export function loginWithDiscord(returnPath = '/auth/callback?return=/creator/') {
+  const returnUrl = encodeURIComponent(`${window.location.origin}${returnPath}`);
+  window.location.href = `/api/auth/discord/start?return=${returnUrl}`;
+}

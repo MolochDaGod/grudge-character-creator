@@ -949,6 +949,7 @@ function setupPersistence() {
 
 async function initPersistence() {
   const grudgeIdBtn = document.getElementById('grudgeIdBtn');
+  const discordBtn = document.getElementById('discordBtn');
   const signOutBtn = document.getElementById('signOutBtn');
   const userDisplay = document.getElementById('userDisplay');
 
@@ -956,6 +957,7 @@ async function initPersistence() {
     try {
       userDisplay.textContent = user.displayName || user.grudgeId || '';
       if (grudgeIdBtn) grudgeIdBtn.style.display = 'none';
+      if (discordBtn) discordBtn.style.display = 'none';
       if (signOutBtn) signOutBtn.style.display = '';
       await characterStore.load();
       buildSavedCharactersList();
@@ -968,6 +970,7 @@ async function initPersistence() {
 
   function showOffline() {
     if (grudgeIdBtn) grudgeIdBtn.style.display = '';
+    if (discordBtn) discordBtn.style.display = '';
     if (signOutBtn) signOutBtn.style.display = 'none';
     userDisplay.textContent = '';
     document.getElementById('savedCharactersList').innerHTML =
@@ -977,6 +980,12 @@ async function initPersistence() {
   if (grudgeIdBtn) {
     grudgeIdBtn.addEventListener('click', () => {
       grudgeAuth.loginWithGrudgeId('/auth/callback?return=/creator/');
+    });
+  }
+
+  if (discordBtn) {
+    discordBtn.addEventListener('click', () => {
+      grudgeAuth.loginWithDiscord('/auth/callback?return=/creator/');
     });
   }
 

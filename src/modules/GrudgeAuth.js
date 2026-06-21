@@ -132,9 +132,9 @@ class GrudgeAuth extends EventTarget {
     return this._applyAuth(data);
   }
 
-  loginWithDiscord() {
-    const returnUrl = encodeURIComponent(window.location.href);
-    window.location.href = `${AUTH_GATEWAY}/auth/discord/start?returnUrl=${returnUrl}`;
+  loginWithDiscord(returnPath = '/auth/callback?return=/creator/') {
+    const returnUrl = encodeURIComponent(`${window.location.origin}${returnPath}`);
+    window.location.href = `/api/auth/discord/start?return=${returnUrl}`;
   }
 
   loginWithGoogle() {

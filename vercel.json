@@ -17,6 +17,8 @@
     { "source": "/api/auth/puter", "destination": "https://grudge-builder-production.up.railway.app/api/auth/puter" },
     { "source": "/api/auth/login", "destination": "https://grudge-builder-production.up.railway.app/api/auth/login" },
     { "source": "/api/auth/me", "destination": "https://grudge-builder-production.up.railway.app/api/auth/me" },
+    { "source": "/api/auth/scoped-profile", "destination": "https://grudge-builder-production.up.railway.app/api/auth/scoped-profile" },
+    { "source": "/api/auth/discord/start", "destination": "https://grudge-builder-production.up.railway.app/api/auth/discord/start" },
     { "source": "/api/auth/session/exchange", "destination": "https://api.grudge-studio.com/api/auth/session/exchange" },
     { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
     { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },

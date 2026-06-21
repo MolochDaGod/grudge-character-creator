@@ -83,6 +83,10 @@
         setTimeout(() => { location.href = returnTo; }, 600);
       } else if (legacyToken) {
         localStorage.setItem(TOKEN_KEY, legacyToken);
+        const gid = params.get('grudge_id');
+        const uname = params.get('username') || params.get('grudge_username');
+        if (gid) localStorage.setItem('grudge_id', gid);
+        if (uname) localStorage.setItem('grudge_username', uname);
         title.textContent = 'Signed in';
         msg.textContent = 'Redirecting…';
         setTimeout(() => { location.href = returnTo; }, 600);

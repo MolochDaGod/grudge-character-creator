@@ -91,6 +91,17 @@
     .systems li { font-size: .8rem; color: var(--muted); padding: 6px 0; border-bottom: 1px solid rgba(42,58,92,.5); }
     .systems li strong { color: var(--text); }
     footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .75rem; }
+    .account-panel {
+      display: none; background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 32px;
+    }
+    .account-panel.visible { display: block; }
+    .account-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; }
+    .account-field { background: rgba(0,0,0,.25); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    .account-field .label { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .account-field .value { font-size: .82rem; color: var(--accent); font-family: monospace; margin-top: 4px; word-break: break-all; }
+    .btn-discord { border-color: #5865F2; color: #5865F2; }
+    .btn-discord:hover { background: rgba(88,101,242,.12); }
   </style>
 </head>
 <body>
@@ -103,6 +114,11 @@
         <button class="btn btn-primary" id="grudgeIdBtn">① Sign in with Grudge ID</button>
       </div>
     </header>
+
+    <div class="account-panel" id="accountPanel">
+      <h2>Your Account <span style="font-size:.7rem;color:var(--muted);font-family:Jost,sans-serif;">(scoped — masked IDs, no secrets)</span></h2>
+      <div class="account-grid" id="accountGrid"></div>
+    </div>
 
     <div class="section">
       <div class="checklist">
@@ -191,6 +207,20 @@
     const TOKEN_KEY = 'grudge_token_persist';
 
     const CHECKS = [
+      {
+        id: 'discord',
+        name: 'Discord login (scoped)',
+        hint: 'OAuth identify+email only — links discord:id → your Grudge account',
+        needsAuth: false,
+        async test() {
+          const returnUrl = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
+          const r = await fetch(`/api/auth/discord/start?return=${returnUrl}`, { redirect: 'manual' });
+          if (r.status !== 302 && r.type !== 'opaqueredirect') {
+            throw new Error(`Discord start returned ${r.status}`);
+          }
+          return 'OK — Discord OAuth gateway reachable (use Discord button to sign in)';
+        },
+      },
       {
         id: 'account',
         name: 'Grudge ID account',
@@ -379,10 +409,48 @@
       location.href = `${AUTH_GATEWAY}/login?redirect_uri=${redirectUri}`;
     }
 
+    function loginWithDiscord() {
+      const returnUrl = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
+      location.href = `/api/auth/discord/start?return=${returnUrl}`;
+    }
+
+    async function loadScopedProfile() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const panel = document.getElementById('accountPanel');
+      const grid = document.getElementById('accountGrid');
+      if (!token) { panel.classList.remove('visible'); return; }
+      try {
+        const r = await fetch('/api/auth/scoped-profile', { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) throw new Error('profile unavailable');
+        const { profile: p } = await r.json();
+        panel.classList.add('visible');
+        const fields = [
+          ['Grudge ID', p.grudgeId],
+          ['Username', p.username],
+          ['Email', p.email || '—'],
+          ['Puter ID', p.puterId || '—'],
+          ['Discord ID', p.discordId || '—'],
+          ['Wallet', p.walletAddress || '—'],
+          ['Server wallet', p.serverWalletAddress || '—'],
+          ['GBUX', p.gbuxBalance],
+          ['Gold', p.gold],
+          ['Premium', p.premiumCurrency],
+          ['Characters', `${p.characters.count} (${p.characters.cnftCount} cNFT)`],
+          ['Providers', p.providers.join(', ')],
+        ];
+        grid.innerHTML = fields.map(([label, value]) =>
+          `<div class="account-field"><div class="label">${label}</div><div class="value">${value}</div></div>`
+        ).join('');
+      } catch {
+        panel.classList.remove('visible');
+      }
+    }
+
     function logout() {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('grudge_id');
       localStorage.removeItem('grudge_username');
+      document.getElementById('accountPanel').classList.remove('visible');
       renderAuth();
       Object.values(state).forEach(s => { s.status = 'idle'; s.message = ''; });
       renderChecklist();
@@ -408,9 +476,13 @@
         const name = user.displayName || user.username || user.grudgeId || 'Player';
         bar.innerHTML = `<span class="user-pill">✓ ${name}</span><button class="btn" id="logoutBtn">Sign out</button>`;
         document.getElementById('logoutBtn').addEventListener('click', logout);
+        loadScopedProfile();
       } else {
-        bar.innerHTML = `<button class="btn btn-primary" id="grudgeIdBtn">① Sign in with Grudge ID</button>`;
+        bar.innerHTML = `
+          <button class="btn btn-primary" id="grudgeIdBtn">① Grudge ID</button>
+          <button class="btn btn-discord" id="discordBtn">Discord</button>`;
         document.getElementById('grudgeIdBtn').addEventListener('click', loginWithGrudgeId);
+        document.getElementById('discordBtn').addEventListener('click', loginWithDiscord);
       }
     }
 
@@ -488,6 +560,7 @@
     if (user) {
       state.account.status = 'pass';
       state.account.message = `Signed in as ${user.displayName || user.username || user.grudgeId}`;
+      await loadScopedProfile();
       renderChecklist();
     }
   </script>
