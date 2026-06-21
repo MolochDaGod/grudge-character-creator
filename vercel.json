@@ -4,7 +4,8 @@
   "installCommand": "npm install",
   "framework": null,
   "redirects": [
-    { "source": "/", "destination": "/game/", "permanent": false }
+    { "source": "/", "destination": "/game", "permanent": false },
+    { "source": "/game/", "destination": "/game", "permanent": false }
   ],
   "rewrites": [
     { "source": "/api/characters", "destination": "https://grudge-builder-production.up.railway.app/api/characters" },
