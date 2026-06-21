@@ -156,6 +156,12 @@
         </article>
         <article class="card external">
           <span class="badge fleet">Fleet</span>
+          <h3>Rec0deD:88 Gaming Portal</h3>
+          <p>Retro game library + 3D engines (The-ENGINE). Use grudge-studio.com — not the raw Railway hostname.</p>
+          <a class="launch" href="https://grudge-studio.com" target="_blank" rel="noopener" data-launch="portal">Open Portal →</a>
+        </article>
+        <article class="card external">
+          <span class="badge fleet">Fleet</span>
           <h3>Survival ARPG</h3>
           <p>Top-down survival action RPG on Grudges fleet.</p>
           <a class="launch" href="https://grudges.grudge-studio.com/arpg-game/" target="_blank" rel="noopener" data-launch="arpg">Play ARPG →</a>
@@ -322,6 +328,20 @@
           const ok = await probeExternal('https://client.grudge-studio.com/play');
           if (!ok) throw new Error('Site unreachable');
           return 'REACHABLE — open tab & confirm play shell loads';
+        },
+      },
+      {
+        id: 'portal',
+        name: 'Rec0deD:88 Gaming Portal',
+        hint: 'The-ENGINE on grudge-studio.com (Vercel). Railway mirror: the-engine.up.railway.app',
+        needsAuth: false,
+        open: 'https://grudge-studio.com',
+        external: true,
+        async test() {
+          const r = await fetch('https://grudge-studio.com/api/health');
+          if (!r.ok) throw new Error(`grudge-studio.com/api/health returned ${r.status}`);
+          const data = await r.json();
+          return `OK — portal healthy (${data.status || 'up'})`;
         },
       },
       {
