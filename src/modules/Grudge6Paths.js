@@ -50,3 +50,20 @@ export function resolveProductionRaceModel(raceId, prefix, manifestModel, assets
   if (fbx) return fbx;
   return manifestModel;
 }
+
+/** Race texture atlases on R2 (arena GLB bake paths — valid for grudge6 FBX UVs). */
+export const RACE_TEXTURE_ATLAS = {
+  human:     'arena/assets/characters/human/textures/Map__9.png',
+  barbarian: 'arena/assets/characters/barbarian/textures/Map__9.png',
+  elf:       'arena/assets/characters/elf/textures/Map__9.png',
+  dwarf:     'arena/assets/characters/dwarf/textures/Map__12.png',
+  orc:       'arena/assets/characters/orc/textures/Map__11.png',
+  undead:    'arena/assets/characters/undead/textures/Map__11.png',
+};
+
+export function grudge6RaceTextureUrl(raceId, assetsBase = 'https://assets.grudge-studio.com') {
+  const id = normalizeRaceId(raceId);
+  const rel = RACE_TEXTURE_ATLAS[id];
+  if (!rel) return null;
+  return `${assetsBase.replace(/\/$/, '')}/${rel}`;
+}

@@ -17,6 +17,7 @@ export const GRUDGE_FLEET = {
   colyseus: 'wss://api.grudge-studio.com',
   world: 'wss://world.grudge-studio.com',
   charactersHub: 'https://characters.grudge-studio.com',
+  arena: 'https://grudge-arena.grudge-studio.com',
   fleetManifest: '/api/fleet/manifest',
   supabase: '/api/supabase',
   crossmint: { characterCollection: '5061318d-ff65-4893-ac4b-9b28efb18ace' },

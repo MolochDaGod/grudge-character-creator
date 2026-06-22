@@ -66,6 +66,10 @@ h1{font-family:var(--font);font-size:32px;color:var(--gold);letter-spacing:1px}
 .tree-head p{font-size:13px;color:var(--muted);margin-top:4px}
 .tree-meta{font-size:11px;color:var(--dim);font-family:var(--font-mono);margin-top:8px}
 .chart{position:relative;height:min(72vh,760px);min-height:520px;margin:12px}
+.flow-axis{position:absolute;left:10px;top:8px;bottom:8px;width:28px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;pointer-events:none;z-index:3;font-family:var(--font);font-size:9px;color:var(--dim);letter-spacing:1px}
+.flow-axis span:first-child{color:var(--muted)}
+.flow-axis span:last-child{color:var(--gold);font-weight:700}
+.flow-line{flex:1;width:2px;background:linear-gradient(180deg,var(--muted) 0%,var(--gold) 100%);margin:4px 0;opacity:.5}
 .edges{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
 .node{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:2;cursor:pointer;transition:filter .15s}
 .node-micro{z-index:1}
@@ -131,6 +135,7 @@ footer{margin-top:28px;color:var(--dim);font-size:11px;text-align:center}
     <div class="tree-wrap">
       <div class="tree-head" id="tree-head"></div>
       <div class="chart" id="chart">
+        <div class="flow-axis" aria-hidden="true"><span>START</span><div class="flow-line"></div><span>CAPSTONE</span></div>
         <svg class="edges" id="edges"></svg>
         <div id="nodes"></div>
       </div>
@@ -348,18 +353,19 @@ footer{margin-top:28px;color:var(--dim);font-size:11px;text-align:center}
   }
 
   /** Remap compact grid coords to a roomier single-tree layout */
+  /** Top → bottom: starters at top, signature capstone at bottom. */
   function layoutPos(node){
     const p = { x: node.position.x, y: node.position.y };
     if (node.kind === 'micro') {
-      p.x = p.x < 50 ? 7 : 93;
-      const row = Math.round((p.y - 14) / 8);
-      p.y = 14 + row * 9;
+      p.x = p.x < 50 ? 9 : 91;
+      const row = Math.round((p.y - 12) / 8);
+      p.y = 12 + row * 8.5;
       return p;
     }
-    if (node.kind === 'signature') return { x: 50, y: 90 };
-    const coreY = { 10: 14, 30: 38, 50: 58, 70: 74 };
-    p.y = coreY[p.y] ?? (12 + p.y * 0.78);
-    p.x = p.x < 40 ? 28 : p.x > 60 ? 72 : 50;
+    if (node.kind === 'signature') return { x: 50, y: 92 };
+    const coreY = { 10: 10, 30: 34, 50: 54, 70: 72 };
+    p.y = coreY[p.y] ?? (8 + p.y * 0.82);
+    p.x = p.x < 40 ? 30 : p.x > 60 ? 70 : 50;
     return p;
   }
 

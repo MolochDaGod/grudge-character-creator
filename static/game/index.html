@@ -90,6 +90,27 @@
     .systems ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
     .systems li { font-size: .8rem; color: var(--muted); padding: 6px 0; border-bottom: 1px solid rgba(42,58,92,.5); }
     .systems li strong { color: var(--text); }
+    .sector-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      max-width: 720px; margin: 0 auto;
+    }
+    @media (max-width: 640px) { .sector-grid { grid-template-columns: 1fr; } }
+    .sector-card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; text-decoration: none; color: inherit; transition: border-color .2s, transform .15s;
+      display: flex; flex-direction: column; gap: 6px; min-height: 100px;
+    }
+    .sector-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .sector-card.safe { border-left: 3px solid var(--accent); }
+    .sector-card.contested { border-left: 3px solid var(--warn); }
+    .sector-card h4 { font-family: 'Cinzel', serif; font-size: .82rem; line-height: 1.25; }
+    .sector-card .diff { font-size: .68rem; color: var(--muted); font-family: monospace; }
+    .sector-card .play { font-size: .75rem; color: var(--accent); font-weight: 600; margin-top: auto; }
+    .world-map-bar {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .world-map-bar p { color: var(--muted); font-size: .82rem; max-width: 480px; }
     footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .75rem; }
     .account-panel {
       display: none; background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
@@ -167,8 +188,14 @@
         <article class="card live">
           <span class="badge">Live</span>
           <h3>Weapons Mastery Codex</h3>
-          <p>9 weapon talent trees with shared mastery pool.</p>
+          <p>9 weapon talent trees — start at top, capstone mastery at bottom.</p>
           <a class="launch" href="/game/weapons" data-launch="weapons">View Trees →</a>
+        </article>
+        <article class="card external">
+          <span class="badge fleet">Fleet</span>
+          <h3>Grudge Arena</h3>
+          <p>3D PvP arena with grudge6 models, weapon skills, and fleet Grudge ID.</p>
+          <a class="launch" href="https://grudge-arena.grudge-studio.com" target="_blank" rel="noopener" data-launch="arena">Enter Arena →</a>
         </article>
         <article class="card external">
           <span class="badge fleet">Fleet</span>
@@ -183,6 +210,17 @@
           <a class="launch" href="https://grudges.grudge-studio.com/arpg-game/" target="_blank" rel="noopener" data-launch="arpg">Play ARPG →</a>
         </article>
       </div>
+    </div>
+
+    <div class="section">
+      <div class="world-map-bar">
+        <div>
+          <h2>World Map — 9 Sectors</h2>
+          <p>Deploy your grudge6 character into any ocean sector. Each zone is a 4 km × 4 km 3D island with unique biomes, hazards, and resources.</p>
+        </div>
+        <a class="btn btn-primary" href="https://client.grudge-studio.com/play" target="_blank" rel="noopener">Full World Map →</a>
+      </div>
+      <div class="sector-grid" id="sectorGrid"></div>
     </div>
 
     <div class="systems section">
@@ -280,14 +318,14 @@
       },
       {
         id: 'r2model',
-        name: 'R2 character model CDN',
-        hint: 'Sample GLB from assets.grudge-studio.com via /api/assets proxy',
+        name: 'R2 grudge6 race model CDN',
+        hint: 'WK_Characters.fbx from assets.grudge-studio.com via /api/assets proxy',
         needsAuth: false,
         async test() {
-          const r = await fetch('/api/assets/models/characters/human.glb', { method: 'HEAD' });
-          if (!r.ok) throw new Error(`Model HEAD returned ${r.status}`);
+          const r = await fetch('/api/assets/models/grudge6/races/WK_Characters.fbx', { method: 'HEAD' });
+          if (!r.ok) throw new Error(`grudge6 FBX HEAD returned ${r.status}`);
           const size = r.headers.get('content-length');
-          return `OK — human.glb${size ? ` (${Math.round(size/1024)}KB)` : ''}`;
+          return `OK — WK_Characters.fbx${size ? ` (${Math.round(size/1024)}KB)` : ''}`;
         },
       },
       {
@@ -317,8 +355,22 @@
           const r = await fetch('/game/weapons');
           if (!r.ok) throw new Error(`/game/weapons returned ${r.status}`);
           const html = await r.text();
-          if (!html.includes('tree-swords')) throw new Error('Swords tree missing from page');
-          return 'OK — 9 weapon trees rendered';
+          if (!html.includes('CAPSTONE')) throw new Error('Top-down flow labels missing');
+          if (!html.includes('"id":"swords"')) throw new Error('Swords tree data missing');
+          return 'OK — 9 weapon trees, top→bottom layout';
+        },
+      },
+      {
+        id: 'arena',
+        name: 'Grudge Arena',
+        hint: '3D PvP arena at grudge-arena.grudge-studio.com',
+        needsAuth: false,
+        open: 'https://grudge-arena.grudge-studio.com',
+        external: true,
+        async test() {
+          const ok = await probeExternal('https://grudge-arena.grudge-studio.com');
+          if (!ok) throw new Error('Arena unreachable');
+          return 'REACHABLE — open tab & confirm arena loads';
         },
       },
       {
@@ -388,6 +440,29 @@
         },
       },
     ];
+
+    const WORLD_SECTORS = [
+      { id: 'ethereal_falls', name: 'Ethereal Falls', diff: '6–9', row: 0, col: 0, accent: '#bf40ff' },
+      { id: 'frostbite_expanse', name: 'Frostbite Expanse', diff: '4–7', row: 0, col: 1, accent: '#7dd3fc' },
+      { id: 'thornwood_wilds', name: 'Thornwood Wilds', diff: '3–7', row: 0, col: 2, accent: '#4ade80' },
+      { id: 'stormbreak_reef', name: 'Stormbreak Reef', diff: '3–6', row: 1, col: 0, accent: '#fbbf24' },
+      { id: 'convergence_nexus', name: 'Convergence Nexus', diff: '5–10', row: 1, col: 1, accent: '#c084fc', contested: true },
+      { id: 'ashen_wastes', name: 'Ashen Wastes', diff: '4–8', row: 1, col: 2, accent: '#fbbf24' },
+      { id: 'abyssal_trench', name: 'Abyssal Trench', diff: '7–10', row: 2, col: 0, accent: '#22d3ee' },
+      { id: 'haven_shore', name: 'Haven Shore', diff: '1–3', row: 2, col: 1, accent: '#6ee7b7', safe: true },
+      { id: 'ember_depths', name: 'Ember Depths', diff: '5–9', row: 2, col: 2, accent: '#f97316' },
+    ];
+
+    const ISLAND_BASE = 'https://client.grudge-studio.com/island-3d';
+    document.getElementById('sectorGrid').innerHTML = WORLD_SECTORS.map(s => {
+      const cls = 'sector-card' + (s.safe ? ' safe' : '') + (s.contested ? ' contested' : '');
+      const url = `${ISLAND_BASE}?mode=zone&sector=${s.id}`;
+      return `<a class="${cls}" href="${url}" target="_blank" rel="noopener" style="border-top:2px solid ${s.accent}">
+        <h4>${s.name}</h4>
+        <span class="diff">Difficulty ${s.diff}</span>
+        <span class="play">Deploy 3D Zone →</span>
+      </a>`;
+    }).join('');
 
     const state = Object.fromEntries(CHECKS.map(c => [c.id, { status: 'idle', message: '' }]));
 

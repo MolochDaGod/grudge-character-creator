@@ -26,6 +26,8 @@ import { BossFight } from './modules/BossFight.js';
 import { VFXManager } from './modules/VFXManager.js';
 import { ForgePanel } from './modules/ForgePanel.js';
 import { resolveTextures, classifyStyle } from './modules/TextureResolver.js';
+import { grudge6RaceTextureUrl, normalizeRaceId } from './modules/Grudge6Paths.js';
+import { ASSET_BASE, isProduction } from './modules/AssetConfig.js';
 import { BoneWeaponEditor } from './modules/BoneWeaponEditor.js';
 
 // ════════════════════════════════════════════════════════════
@@ -167,6 +169,32 @@ function initScene() {
 // ════════════════════════════════════════════════════════════
 // Model Loading
 // ════════════════════════════════════════════════════════════
+async function applyGrudge6Atlas(model, raceId) {
+  const atlasUrl = grudge6RaceTextureUrl(normalizeRaceId(raceId), isProduction ? ASSET_BASE : 'https://assets.grudge-studio.com');
+  if (!atlasUrl) return 0;
+
+  const atlas = await new Promise((resolve) => {
+    new THREE.TextureLoader().load(atlasUrl, resolve, undefined, () => resolve(null));
+  });
+  if (!atlas) return 0;
+
+  atlas.flipY = false;
+  atlas.colorSpace = THREE.SRGBColorSpace;
+  let patched = 0;
+  model.traverse((child) => {
+    if (!child.isMesh || !child.material || !child.geometry?.attributes?.uv) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    for (const mat of mats) {
+      if (!mat?.isMeshStandardMaterial) continue;
+      mat.map = atlas;
+      mat.color.set(0xffffff);
+      mat.needsUpdate = true;
+      patched++;
+    }
+  });
+  return patched;
+}
+
 async function loadCharacterModel(raceConfig) {
   const overlay = document.getElementById('loadingOverlay');
   const loadingText = document.getElementById('loadingText');
@@ -191,9 +219,12 @@ async function loadCharacterModel(raceConfig) {
     // Scale, center, shadows via SmartLoader helper
     prepareModel(model);
 
-    // Auto-resolve missing textures (toon for low-poly, PBR for high-poly)
+    // Grudge6 race atlas (production FBX) then sibling / procedural fallback
+    const atlasPatched = await applyGrudge6Atlas(model, raceConfig.raceId);
     const texResult = await resolveTextures(model, raceConfig.model);
-    if (texResult.discovered || texResult.generated) {
+    if (atlasPatched > 0) {
+      console.log(`[Grudge6] Applied race atlas to ${atlasPatched} material slots`);
+    } else if (texResult.discovered || texResult.generated) {
       const style = classifyStyle(model);
       console.log(`[TextureResolver] ${texResult.discovered} discovered, ${texResult.generated} generated (${style} style)`);
     }
