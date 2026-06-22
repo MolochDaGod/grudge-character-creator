@@ -347,6 +347,22 @@ footer{margin-top:28px;color:var(--dim);font-size:11px;text-align:center}
     document.getElementById('rank-minus').onclick = () => removeRank(treeId, nodeId);
   }
 
+  /** Remap compact grid coords to a roomier single-tree layout */
+  function layoutPos(node){
+    const p = { x: node.position.x, y: node.position.y };
+    if (node.kind === 'micro') {
+      p.x = p.x < 50 ? 7 : 93;
+      const row = Math.round((p.y - 14) / 8);
+      p.y = 14 + row * 9;
+      return p;
+    }
+    if (node.kind === 'signature') return { x: 50, y: 90 };
+    const coreY = { 10: 14, 30: 38, 50: 58, 70: 74 };
+    p.y = coreY[p.y] ?? (12 + p.y * 0.78);
+    p.x = p.x < 40 ? 28 : p.x > 60 ? 72 : 50;
+    return p;
+  }
+
   function renderTree(){
     const tree = DATA.trees.find(t => t.id === activeTree);
     const head = document.getElementById('tree-head');
@@ -361,17 +377,18 @@ footer{margin-top:28px;color:var(--dim);font-size:11px;text-align:center}
 
     const nodeById = Object.fromEntries(tree.nodes.map((n, i) => [n.id, { ...n, idx: i }]));
     const edges = tree.edges.map(([a, b]) => {
-      const from = tree.nodes[a];
-      const to = tree.nodes[b];
-      const dash = to.kind === 'micro' ? '3 4' : '5 5';
-      return '<line x1="' + (from.position.x / 100 * w) + '" y1="' + (from.position.y / 100 * h) + '" ' +
-        'x2="' + (to.position.x / 100 * w) + '" y2="' + (to.position.y / 100 * h) + '" ' +
+      const from = layoutPos(tree.nodes[a]);
+      const to = layoutPos(tree.nodes[b]);
+      const dash = tree.nodes[b].kind === 'micro' ? '3 4' : '5 5';
+      return '<line x1="' + (from.x / 100 * w) + '" y1="' + (from.y / 100 * h) + '" ' +
+        'x2="' + (to.x / 100 * w) + '" y2="' + (to.y / 100 * h) + '" ' +
         'stroke="' + tree.color + '66" stroke-width="2" stroke-dasharray="' + dash + '"/>';
     }).join('');
     document.getElementById('edges').setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     document.getElementById('edges').innerHTML = edges;
 
     document.getElementById('nodes').innerHTML = tree.nodes.map(node => {
+      const pos = layoutPos(node);
       const isMicro = node.kind === 'micro';
       const isSig = node.kind === 'signature';
       const size = isSig ? 72 : isMicro ? 44 : 58;
@@ -390,7 +407,7 @@ footer{margin-top:28px;color:var(--dim);font-size:11px;text-align:center}
       const orbCls = isSig ? 'orb orb-sig' : isMicro ? 'orb orb-micro' : 'orb';
       const hasCharm = !!getSocket(tree.id, node.id);
 
-      return '<div class="' + cls + '" data-key="' + key + '" style="left:' + node.position.x + '%;top:' + node.position.y + '%;width:' + width + 'px;color:' + tree.color + '">' +
+      return '<div class="' + cls + '" data-key="' + key + '" style="left:' + pos.x + '%;top:' + pos.y + '%;width:' + width + 'px;color:' + tree.color + '">' +
         '<div class="' + orbCls + '" style="width:' + size + 'px;height:' + size + 'px;border-color:' + tree.color + (alloc > 0 ? '' : '99') + ';box-shadow:0 0 ' + (isMicro ? 8 : 14) + 'px ' + tree.color + (alloc > 0 ? '88' : '33') + '">' +
           '<span class="ranks" style="font-size:' + (isMicro ? 11 : 14) + 'px">' + displayRank + '</span>' +
           (hasCharm ? '<span class="charm-dot"></span>' : '') +
