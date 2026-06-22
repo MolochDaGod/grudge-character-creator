@@ -12,9 +12,14 @@
  */
 
 import { ASSET_BASE, isProduction, MANIFEST_API } from './AssetConfig.js';
+import { grudge6RaceModelUrl, normalizeRaceId, resolveProductionRaceModel } from './Grudge6Paths.js';
 
+const R2_BASE = import.meta.env.VITE_R2_BASE_URL || 'https://assets.grudge-studio.com';
 const BASE = `${ASSET_BASE}/factioncharacters`;
-const ANIM_BASE = `${ASSET_BASE}/animationsweapons`;
+/** Production R2 layout: models/animationsweapons/{pack}/ */
+const ANIM_BASE = isProduction
+  ? `${R2_BASE.replace(/\/$/, '')}/models/animationsweapons`
+  : `${ASSET_BASE}/animationsweapons`;
 
 // Bone containers (identical across all 6 races)
 export const BONE_CONTAINERS = {
@@ -100,7 +105,7 @@ export const FACTIONS = {
     name: 'Legion',
     color: '#8b2020',
     races: {
-      orc_classic: {
+      orc: {
         name: 'Orc (ORC)',
         prefix: 'ORC_',
         model: `${BASE}/Orcs/models/ORC_Characters_Customizable.FBX`,
@@ -433,8 +438,89 @@ export function getRace(factionId, raceId) {
 
 // ── D1 Manifest Fetching ────────────────────────────────────
 
+/** Apply grudge6 FBX CDN paths when running against R2 (production). */
+function applyProductionRaceModels(factions) {
+  if (!isProduction) return factions;
+  const out = structuredClone(factions);
+  for (const faction of Object.values(out)) {
+    for (const [raceId, race] of Object.entries(faction.races || {})) {
+      const id = normalizeRaceId(raceId, race.prefix);
+      const url = grudge6RaceModelUrl(id, R2_BASE);
+      if (url) {
+        race.model = url;
+        race.format = 'fbx';
+      }
+    }
+  }
+  return out;
+}
+
+/** D1 animation pack keys may differ from bundled folder names — keep file lists from bundled. */
+const D1_ANIM_PATH_ALIASES = {
+  '1h_sword_shield': '1h_sword_shield',
+  '2h_melee': '2h_melee',
+  longbow: 'longbow',
+  magic: 'magic',
+  rifle_crossbow: 'rifle_crossbow',
+  advanced_gun: 'advanced_gun',
+};
+
+function mergeAnimationPacks(d1Packs, bundled) {
+  if (!d1Packs || !Object.keys(d1Packs).length) return bundled;
+  const merged = { ...bundled };
+  for (const [key, d1Pack] of Object.entries(d1Packs)) {
+    const alias = D1_ANIM_PATH_ALIASES[key] || key;
+    const fallback = bundled[alias] || bundled[key];
+    const files = Array.isArray(d1Pack.files) && d1Pack.files.length
+      ? d1Pack.files
+      : (fallback?.files || []);
+    const path = files.length && fallback?.path
+      ? fallback.path
+      : (d1Pack.path || fallback?.path || '');
+    merged[key] = {
+      ...(fallback || {}),
+      ...d1Pack,
+      name: d1Pack.name || fallback?.name || key,
+      path,
+      files,
+    };
+  }
+  return merged;
+}
+
+function mergeWeaponPacks(d1Packs, bundled) {
+  if (!d1Packs || !Object.keys(d1Packs).length) return bundled;
+  const merged = { ...bundled };
+  for (const [key, d1Pack] of Object.entries(d1Packs)) {
+    const fallback = bundled[key];
+    merged[key] = {
+      ...(fallback || {}),
+      ...d1Pack,
+      path: d1Pack.path || fallback?.path || '',
+    };
+  }
+  return merged;
+}
+
+function normalizeManifestFactions(d1Factions) {
+  const out = structuredClone(d1Factions);
+  for (const [factionId, faction] of Object.entries(out)) {
+    const races = {};
+    for (const [raceId, race] of Object.entries(faction.races || {})) {
+      const id = normalizeRaceId(raceId, race.prefix);
+      races[id] = {
+        ...race,
+        model: resolveProductionRaceModel(id, race.prefix, race.model, R2_BASE),
+        format: 'fbx',
+      };
+    }
+    faction.races = races;
+  }
+  return out;
+}
+
 /** Active factions data (starts as bundled, overwritten by D1 manifest) */
-let _activeFactions = FACTIONS;
+let _activeFactions = applyProductionRaceModels(FACTIONS);
 let _activeAnimPacks = WEAPON_ANIMATION_PACKS;
 let _activeWeaponPacks = WEAPON_MODEL_PACKS;
 let _manifestLoaded = false;
@@ -448,28 +534,43 @@ let _manifestLoaded = false;
  * @returns {Promise<boolean>} true if manifest was loaded from D1
  */
 export async function loadManifest() {
-  if (!MANIFEST_API || _manifestLoaded) return _manifestLoaded;
+  if (_manifestLoaded) return _manifestLoaded;
+
+  const manifestBase = MANIFEST_API || '';
+  const manifestUrl = manifestBase
+    ? `${manifestBase.replace(/\/$/, '')}/api/manifest`
+    : '/api/manifest';
 
   try {
-    const resp = await fetch(`${MANIFEST_API}/api/manifest`);
+    const resp = await fetch(manifestUrl);
     if (!resp.ok) throw new Error(`Manifest API ${resp.status}`);
     const data = await resp.json();
 
     if (data.factions && Object.keys(data.factions).length > 0) {
-      _activeFactions = data.factions;
+      _activeFactions = isProduction
+        ? normalizeManifestFactions(data.factions)
+        : data.factions;
+    } else if (isProduction) {
+      _activeFactions = applyProductionRaceModels(FACTIONS);
     }
+
     if (data.animationPacks) {
-      _activeAnimPacks = data.animationPacks;
+      _activeAnimPacks = mergeAnimationPacks(data.animationPacks, WEAPON_ANIMATION_PACKS);
     }
     if (data.weaponModelPacks) {
-      _activeWeaponPacks = data.weaponModelPacks;
+      _activeWeaponPacks = mergeWeaponPacks(data.weaponModelPacks, WEAPON_MODEL_PACKS);
     }
 
     _manifestLoaded = true;
-    console.log('[FactionRegistry] Loaded manifest from D1 —', Object.keys(data.factions || {}).length, 'factions');
+    console.log('[FactionRegistry] Loaded manifest from D1 —',
+      Object.keys(_activeFactions).length, 'factions,',
+      Object.keys(_activeAnimPacks).length, 'anim packs');
     return true;
   } catch (err) {
     console.warn('[FactionRegistry] D1 manifest unavailable, using bundled data:', err.message);
+    if (isProduction) {
+      _activeFactions = applyProductionRaceModels(FACTIONS);
+    }
     return false;
   }
 }

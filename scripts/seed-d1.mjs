@@ -23,26 +23,35 @@ const isLocal = process.argv.includes('--local');
 const flag = isLocal ? '--local' : '';
 
 // ── Model data (mirrored from FactionRegistry.js) ──────────
+const RACE_FBX = {
+  human:     'WK_Characters.fbx',
+  barbarian: 'BRB_Characters.fbx',
+  elf:       'ELF_Characters.fbx',
+  dwarf:     'DWF_Characters.fbx',
+  orc:       'ORC_Characters.fbx',
+  undead:    'UD_Characters.fbx',
+};
+
 const FACTIONS = {
   crusade: {
     name: 'Crusade', color: '#c9a04e',
     races: {
-      human:     { name: 'Human (WK)',       prefix: 'WK_',  glb: 'human.glb' },
-      barbarian: { name: 'Barbarian (BRB)',   prefix: 'BRB_', glb: 'barbarian.glb' },
+      human:     { name: 'Human (WK)',       prefix: 'WK_' },
+      barbarian: { name: 'Barbarian (BRB)',   prefix: 'BRB_' },
     },
   },
   fabled: {
     name: 'Fabled', color: '#7ec8e3',
     races: {
-      elf:   { name: 'Elf (ELF)',     prefix: 'ELF_',  glb: 'elf.glb' },
-      dwarf: { name: 'Dwarf (DWF)',   prefix: 'DWF_',  glb: 'dwarf.glb' },
+      elf:   { name: 'Elf (ELF)',     prefix: 'ELF_' },
+      dwarf: { name: 'Dwarf (DWF)',   prefix: 'DWF_' },
     },
   },
   legion: {
     name: 'Legion', color: '#8b2020',
     races: {
-      orc:    { name: 'Orc (ORC)',     prefix: 'ORC_',  glb: 'orc.glb' },
-      undead: { name: 'Undead (UD)',    prefix: 'UD_',   glb: 'undead.glb' },
+      orc:    { name: 'Orc (ORC)',     prefix: 'ORC_' },
+      undead: { name: 'Undead (UD)',    prefix: 'UD_' },
     },
   },
 };
@@ -71,6 +80,24 @@ const EQUIPMENT_TEMPLATE = [
   { slot: 'wood',      group: 'utility',  variants: ['_default'],          tpl: 'Xtra_wood',        bone: 'Bone_wood' },
   { slot: 'quiver',    group: 'utility',  variants: ['_default'],          tpl: 'Xtra_quiver',      bone: 'Quiver_container' },
 ];
+
+// D1 pack_key → R2 folder under models/animationsweapons/
+const ANIM_FOLDERS = {
+  '1h_sword_shield': '1hweaponandshield',
+  '2h_melee': 'meleemoves',
+  longbow: 'longbow_pack_unzipped',
+  magic: 'magicmotion',
+  rifle_crossbow: 'rifleandcrossbow',
+  advanced_gun: 'advancedgunandcrossbow',
+  pro_sword_shield: 'pro_sword_shield',
+  pro_longbow: 'pro_longbow',
+  pro_magic: 'pro_magic',
+  pro_melee_axe: 'pro_melee_axe',
+  great_sword: 'great_swords',
+  magic_locomotion: 'magic_locomotion',
+  male_injured: 'male_injured',
+  male_locomotion: 'male_locomotion',
+};
 
 // Animation packs
 const ANIMATION_PACKS = {
@@ -114,11 +141,12 @@ const statements = [];
 for (const [factionId, faction] of Object.entries(FACTIONS)) {
   for (const [raceId, race] of Object.entries(faction.races)) {
     const modelId = `${factionId}_${raceId}`;
-    const r2Url = `${R2_BASE}/models/characters/${race.glb}`;
+    const fbxFile = RACE_FBX[raceId];
+    const r2Url = `${R2_BASE}/models/grudge6/races/${fbxFile}`;
 
     statements.push(
       `INSERT OR REPLACE INTO models (id, faction_id, race_id, name, prefix, faction_name, faction_color, r2_url, skeleton_type, format)`
-      + ` VALUES ('${modelId}', '${factionId}', '${raceId}', '${race.name}', '${race.prefix}', '${faction.name}', '${faction.color}', '${r2Url}', 'bip001', 'glb');`
+      + ` VALUES ('${modelId}', '${factionId}', '${raceId}', '${race.name}', '${race.prefix}', '${faction.name}', '${faction.color}', '${r2Url}', 'bip001', 'fbx');`
     );
 
     // Equipment slots for this race
@@ -144,7 +172,8 @@ for (const [factionId, faction] of Object.entries(FACTIONS)) {
 // Insert animation packs
 for (const [key, pack] of Object.entries(ANIMATION_PACKS)) {
   const packId = uid();
-  const r2Base = `${R2_BASE}/animations/${key}/`;
+  const folder = ANIM_FOLDERS[key] || key;
+  const r2Base = `${R2_BASE}/models/animationsweapons/${folder}/`;
   statements.push(
     `INSERT OR REPLACE INTO animation_packs (id, pack_key, name, r2_base_url, files)`
     + ` VALUES ('${packId}', '${key}', '${pack.name}', '${r2Base}', '[]');`

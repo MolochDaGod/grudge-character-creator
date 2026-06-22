@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { loadModel, loadModelFromFile, loadAnimationClips, prepareModel, fbxLoader, initKTX2, SUPPORTED_EXTENSIONS } from './modules/SmartLoader.js';
 
 import { EquipmentManager } from './modules/EquipmentManager.js';
-import { getAllRaces, WEAPON_ANIMATION_PACKS, loadManifest, getAnimationPacks } from './modules/FactionRegistry.js';
+import { getAllRaces, loadManifest, getAnimationPacks, getWeaponModelPacks } from './modules/FactionRegistry.js';
 import {
   ATTRIBUTES, ATTR_KEYS, MAX_POINTS,
   calculateDerivedStats, simulateCombat, createDefaultCharacter
@@ -246,7 +246,7 @@ async function loadCharacterModel(raceConfig) {
 // Animation Loading
 // ════════════════════════════════════════════════════════════
 async function loadAnimation(packKey, fileName) {
-  const pack = WEAPON_ANIMATION_PACKS[packKey];
+  const pack = getAnimationPacks()[packKey];
   if (!pack || !currentModel || !mixer) return;
 
   const url = pack.path + fileName;
@@ -361,7 +361,7 @@ function buildEquipmentUI(slots) {
         equipMgr.equipWeapon(slot, variant);
         // Auto-switch to weapon's animation pack
         if (WEAPON_ANIM_MAP[slot] && weaponCtrl && currentModel && mixer) {
-          await weaponCtrl.equipWeapon(slot, WEAPON_ANIMATION_PACKS, currentModel);
+          await weaponCtrl.equipWeapon(slot, getAnimationPacks(), currentModel);
           // Auto-select the animation pack in the dropdown
           const packSelect = document.getElementById('weaponPackSelect');
           if (packSelect) {
@@ -380,7 +380,7 @@ function buildEquipmentUI(slots) {
 
 function buildAnimationUI() {
   const select = document.getElementById('weaponPackSelect');
-  for (const [key, pack] of Object.entries(WEAPON_ANIMATION_PACKS)) {
+  for (const [key, pack] of Object.entries(getAnimationPacks())) {
     const opt = document.createElement('option');
     opt.value = key;
     opt.textContent = pack.name;
@@ -388,7 +388,7 @@ function buildAnimationUI() {
   }
 
   select.addEventListener('change', () => {
-    const pack = WEAPON_ANIMATION_PACKS[select.value];
+    const pack = getAnimationPacks()[select.value];
     const list = document.getElementById('animList');
     if (!pack) { list.innerHTML = ''; return; }
 

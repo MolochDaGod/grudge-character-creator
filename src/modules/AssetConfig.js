@@ -38,6 +38,15 @@ export function assetUrl(path) {
  */
 export function modelUrl(filename) {
   if (isProduction) {
+    const raceFile = {
+      'human.glb': 'WK_Characters.fbx',
+      'barbarian.glb': 'BRB_Characters.fbx',
+      'elf.glb': 'ELF_Characters.fbx',
+      'dwarf.glb': 'DWF_Characters.fbx',
+      'orc.glb': 'ORC_Characters.fbx',
+      'undead.glb': 'UD_Characters.fbx',
+    }[filename];
+    if (raceFile) return assetUrl(`models/grudge6/races/${raceFile}`);
     return assetUrl(`models/characters/${filename}`);
   }
   // Local dev: FBX models served from parent via Vite plugin
