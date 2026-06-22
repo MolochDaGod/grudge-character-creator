@@ -405,8 +405,32 @@
     }
 
     function loginWithGrudgeId() {
-      const redirectUri = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
-      location.href = `${AUTH_GATEWAY}/login?redirect_uri=${redirectUri}`;
+      const audience = location.origin;
+      const redirect = `${audience}/auth/callback?return=/game`;
+      const params = new URLSearchParams({ origin: audience, redirect });
+      const url = `${AUTH_GATEWAY}/api/auth/page?${params.toString()}`;
+      const w = 440, h = 720;
+      const left = Math.max(0, (screen.width - w) / 2);
+      const top = Math.max(0, (screen.height - h) / 2);
+      const popup = window.open(url, 'grudge-auth', `width=${w},height=${h},left=${left},top=${top},popup=yes`);
+      if (!popup) { location.href = url; return; }
+      const sendInit = () => { try { popup.postMessage({ type: 'grudge-auth:init', origin: audience }, AUTH_GATEWAY); } catch (_) {} };
+      const onMsg = async (e) => {
+        if (e.origin !== AUTH_GATEWAY && !/^https:\/\/([a-z0-9-]+\.)*grudge-studio\.com$/.test(e.origin)) return;
+        if (e.data?.type === 'grudge-auth:ready') { sendInit(); return; }
+        const token = e.data?.token;
+        if (!token) return;
+        if (e.data?.type !== 'grudge-auth:success' && e.data?.type !== 'grudge:auth:success') return;
+        window.removeEventListener('message', onMsg);
+        clearInterval(poll);
+        try { popup.close(); } catch (_) {}
+        location.href = `${redirect}${redirect.includes('?') ? '&' : '?'}grudge_token=${encodeURIComponent(token)}`;
+      };
+      const poll = setInterval(() => { if (popup.closed) { window.removeEventListener('message', onMsg); clearInterval(poll); } }, 500);
+      const initRetry = setInterval(sendInit, 400);
+      setTimeout(() => clearInterval(initRetry), 4000);
+      window.addEventListener('message', onMsg);
+      sendInit();
     }
 
     function loginWithDiscord() {
