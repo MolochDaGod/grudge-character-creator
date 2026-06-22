@@ -8,6 +8,8 @@
     { "source": "/game/", "destination": "/game", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/api/fleet/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/fleet/:path*" },
+    { "source": "/api/supabase/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/supabase/:path*" },
     { "source": "/api/characters", "destination": "https://grudge-builder-production.up.railway.app/api/characters" },
     { "source": "/api/characters/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/characters/:path*" },
     { "source": "/api/wallet/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/wallet/:path*" },

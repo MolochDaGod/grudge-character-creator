@@ -1,6 +1,6 @@
 /**
  * grudgeFleet.js — ONE TRUTH wiring (vanilla JS copy for grudge6 / character creator).
- * TypeScript canonical source: GrudgeBuilder/client/src/lib/grudgeFleet.ts
+ * TypeScript canonical source: GrudgeBuilder/shared/fleet + client/src/lib/grudgeFleet.ts
  */
 
 export const GAME_DATA_RAILWAY = 'https://grudge-builder-production.up.railway.app';
@@ -14,6 +14,11 @@ export const GRUDGE_FLEET = {
   assets: 'https://assets.grudge-studio.com',
   ai: 'https://ai.grudge-studio.com',
   objectStore: 'https://objectstore.grudge-studio.com/api/v1',
+  colyseus: 'wss://api.grudge-studio.com',
+  world: 'wss://world.grudge-studio.com',
+  charactersHub: 'https://characters.grudge-studio.com',
+  fleetManifest: '/api/fleet/manifest',
+  supabase: '/api/supabase',
   crossmint: { characterCollection: '5061318d-ff65-4893-ac4b-9b28efb18ace' },
 };
 
@@ -37,8 +42,6 @@ function parsePopupAuthMessage(data) {
 
 /**
  * Open Grudge ID auth popup (canonical). Falls back to full-page redirect if blocked.
- * @param {string} returnPath - e.g. '/auth/callback?return=/game'
- * @param {(result: { token: string, user: object }) => void} [onSuccess]
  */
 export function openGrudgeAuthPopup(returnPath = '/auth/callback?return=/game', onSuccess) {
   const audience = window.location.origin;
@@ -84,9 +87,7 @@ export function openGrudgeAuthPopup(returnPath = '/auth/callback?return=/game', 
   };
 
   const poll = setInterval(() => {
-    if (popup.closed) {
-      cleanup();
-    }
+    if (popup.closed) cleanup();
   }, 500);
   const initRetry = setInterval(sendInit, 400);
   setTimeout(() => clearInterval(initRetry), 4000);
@@ -97,9 +98,4 @@ export function openGrudgeAuthPopup(returnPath = '/auth/callback?return=/game', 
 
 export function loginWithGrudgeId(returnPath = '/auth/callback?return=/game') {
   openGrudgeAuthPopup(returnPath);
-}
-
-export function loginWithDiscord(returnPath = '/auth/callback?return=/creator/') {
-  const returnUrl = encodeURIComponent(`${window.location.origin}${returnPath}`);
-  window.location.href = `/api/auth/discord/start?return=${returnUrl}`;
 }

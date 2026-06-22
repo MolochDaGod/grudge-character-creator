@@ -12,6 +12,7 @@
 
 import { GRUDGE_API } from './AssetConfig.js';
 import { loginWithGrudgeId } from './grudgeFleet.js';
+import { model3dFromEquipped } from './CharacterBridge.js';
 
 const TOKEN_KEY = 'grudge_token';
 const STORAGE_KEY_PERSISTENT = 'grudge_token_persist';
@@ -209,12 +210,15 @@ class GrudgeAuth extends EventTarget {
   async createCharacter(character) {
     if (!this._token) throw new Error('Not authenticated');
     const attrs = character.attrs || character.attributes || {};
+    const raceId = character.raceId || character.race || 'human';
+    const equipped = character.equipped || character.equipment || {};
     const body = {
       name: character.name,
-      raceId: character.raceId || character.race,
+      raceId,
       classId: character.classId || character.class || 'warrior',
       factionId: character.factionId,
-      equipment: character.equipped || character.equipment || {},
+      equipment: equipped,
+      model3d: character.model3d || model3dFromEquipped(raceId, equipped, character.model3dOpts),
       attributes: Object.keys(attrs).length ? attrs : {
         Strength: 10, Vitality: 10, Endurance: 10, Intellect: 10,
         Wisdom: 10, Dexterity: 10, Agility: 10, Tactics: 10,
@@ -231,9 +235,15 @@ class GrudgeAuth extends EventTarget {
 
   async updateCharacter(id, updates) {
     if (!this._token) throw new Error('Not authenticated');
+    const body = { ...updates };
+    if (updates.equipped && !updates.model3d) {
+      const raceId = updates.raceId || updates.race || 'human';
+      body.model3d = model3dFromEquipped(raceId, updates.equipped);
+      body.equipment = updates.equipped;
+    }
     const data = await this._fetch(`/api/characters/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(updates),
+      body: JSON.stringify(body),
     });
     return data.character || data;
   }

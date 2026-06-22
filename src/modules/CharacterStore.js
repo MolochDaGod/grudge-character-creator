@@ -101,11 +101,12 @@ class CharacterStore extends EventTarget {
   }
 
   /** Serialize current editor state into a saveable object. */
-  static serialize({ factionId, raceId, name, equipped, attrs, level }) {
+  static serialize({ factionId, raceId, name, equipped, attrs, level, classId }) {
     return {
       name: name || 'Unnamed',
       factionId,
       raceId,
+      classId: classId || 'warrior',
       equipped: equipped || {},
       attrs: attrs || {},
       level: level || 1,

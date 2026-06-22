@@ -10,6 +10,7 @@ import {
 } from './modules/StatsEngine.js';
 import { grudgeAuth } from './modules/GrudgeAuth.js';
 import { characterStore } from './modules/CharacterStore.js';
+import { equippedFromModel3d } from './modules/CharacterBridge.js';
 import {
   CLASSES, CLASS_SKILLS, PROFESSIONS, WORGE_FORMS, MAGIC_VFX,
   WEAPON_TYPES, WEAPON_SKILLS, MASTERY_TIERS, getMasteryProgress,
@@ -896,8 +897,9 @@ function loadSavedCharacter(id) {
 
   // Load model and restore equipment after load
   loadCharacterModel(race).then(() => {
-    if (char.equipped && equipMgr) {
-      for (const [slot, variant] of Object.entries(char.equipped)) {
+    const equipped = char.equipped || (char.model3d ? equippedFromModel3d(char) : null);
+    if (equipped && equipMgr) {
+      for (const [slot, variant] of Object.entries(equipped)) {
         equipMgr.equip(slot, variant);
       }
       buildEquipmentUI(equipMgr.getSlotSummary());
