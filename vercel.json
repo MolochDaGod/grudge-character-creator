@@ -4,6 +4,8 @@
   "installCommand": "npm install",
   "framework": null,
   "redirects": [
+    { "source": "/viewer", "destination": "https://client.grudge-studio.com/viewer", "permanent": false },
+    { "source": "/viewer/:path*", "destination": "https://client.grudge-studio.com/viewer/:path*", "permanent": false },
     { "source": "/", "destination": "/game", "permanent": false },
     { "source": "/game/", "destination": "/game", "permanent": false }
   ],
