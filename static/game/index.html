@@ -130,11 +130,13 @@
   <div class="wrap">
     <header>
       <div class="logo">GRUDGE STUDIO</div>
-      <div class="tagline">Sign in once, then verify each connection below</div>
+      <div class="tagline">One Grudge ID · Discord already works on id.grudge-studio.com · no second login</div>
       <div class="auth-bar" id="authBar">
-        <button class="btn btn-primary" id="grudgeIdBtn">① Sign in with Grudge ID</button>
+        <button class="btn btn-primary" id="grudgeIdBtn">① Grudge ID</button>
+        <button class="btn btn-discord" id="discordBtn">Discord</button>
       </div>
     </header>
+    <div id="opsBanner" style="display:none;margin-bottom:20px;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:var(--panel);font-size:.82rem;"></div>
 
     <div class="account-panel" id="accountPanel">
       <h2>Your Account <span style="font-size:.7rem;color:var(--muted);font-family:Jost,sans-serif;">(scoped — masked IDs, no secrets)</span></h2>
@@ -241,32 +243,87 @@
   </div>
 
   <script type="module">
+    /** Canonical fleet — same Discord/auth as Warlords (id.grudge-studio.com) */
     const AUTH_GATEWAY = 'https://id.grudge-studio.com';
+    const GAME_DATA = 'https://grudge-api-production-0d46.up.railway.app';
+    const FLEET_TOKEN_KEYS = [
+      'grudge_token_persist',
+      'grudge_auth_token',
+      'grudge_session_token',
+      'sso_token',
+      'grudge_token',
+    ];
     const TOKEN_KEY = 'grudge_token_persist';
+
+    function getFleetToken() {
+      for (const k of FLEET_TOKEN_KEYS) {
+        try {
+          const v = localStorage.getItem(k);
+          if (v) return v;
+        } catch { /* ignore */ }
+      }
+      try { return sessionStorage.getItem('grudge_token'); } catch { return null; }
+    }
+
+    function storeFleetToken(token) {
+      if (!token) return;
+      for (const k of FLEET_TOKEN_KEYS) {
+        try { localStorage.setItem(k, token); } catch { /* ignore */ }
+      }
+    }
+
+    function clearFleetTokens() {
+      for (const k of FLEET_TOKEN_KEYS) {
+        try { localStorage.removeItem(k); } catch { /* ignore */ }
+      }
+    }
 
     const CHECKS = [
       {
+        id: 'id_gateway',
+        name: 'Auth gateway (id.grudge-studio.com)',
+        hint: 'Canonical login page — Discord / Puter / email all live here',
+        needsAuth: false,
+        async test() {
+          const r = await fetch(`${AUTH_GATEWAY}/api/auth/page`, { method: 'HEAD', mode: 'cors' }).catch(() => null);
+          // HEAD may CORS-fail from browser; also probe same-origin rewrite
+          const local = await fetch('/api/auth/page', { method: 'GET', redirect: 'manual' });
+          if (local.ok || local.status === 302 || local.type === 'opaqueredirect') {
+            return 'OK — id gateway / auth page reachable via same-origin rewrite';
+          }
+          if (r && (r.ok || r.status === 405)) return 'OK — id.grudge-studio.com up';
+          throw new Error(`Auth page probe failed (local ${local.status})`);
+        },
+      },
+      {
         id: 'discord',
-        name: 'Discord login (scoped)',
-        hint: 'OAuth identify+email only — links discord:id → your Grudge account',
+        name: 'Discord OAuth (existing app)',
+        hint: 'Uses id.grudge-studio.com Discord — identify+email only, no second client',
         needsAuth: false,
         async test() {
           const returnUrl = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
+          // Same path Warlords uses (Vercel → id gateway)
           const r = await fetch(`/api/auth/discord/start?return=${returnUrl}`, { redirect: 'manual' });
-          if (r.status !== 302 && r.type !== 'opaqueredirect') {
-            throw new Error(`Discord start returned ${r.status}`);
+          const ok =
+            r.status === 302
+            || r.status === 301
+            || r.status === 307
+            || r.status === 308
+            || r.type === 'opaqueredirect';
+          if (!ok) {
+            throw new Error(`Discord start returned ${r.status} — expected 302 via id gateway`);
           }
-          return 'OK — Discord OAuth gateway reachable (use Discord button to sign in)';
+          return 'OK — Discord OAuth start works (click Discord to sign in)';
         },
       },
       {
         id: 'account',
         name: 'Grudge ID account',
-        hint: 'Sign in above first — this verifies your session token',
+        hint: 'Sign in above first — verifies session JWT on grudge-api',
         needsAuth: true,
         async test() {
-          const token = localStorage.getItem(TOKEN_KEY);
-          if (!token) throw new Error('Not signed in — click ① Sign in with Grudge ID');
+          const token = getFleetToken();
+          if (!token) throw new Error('Not signed in — click Discord or Grudge ID');
           const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
           if (!r.ok) throw new Error(`/api/auth/me returned ${r.status}`);
           const data = await r.json();
@@ -277,10 +334,10 @@
       {
         id: 'characters',
         name: 'Your characters API',
-        hint: 'Lists characters tied to your account on Railway',
+        hint: 'Lists characters tied to your account on grudge-api Railway',
         needsAuth: true,
         async test() {
-          const token = localStorage.getItem(TOKEN_KEY);
+          const token = getFleetToken();
           if (!token) throw new Error('Sign in first');
           const r = await fetch('/api/characters', { headers: { Authorization: `Bearer ${token}` } });
           if (!r.ok) throw new Error(`/api/characters returned ${r.status}`);
@@ -295,7 +352,7 @@
         hint: 'Checks Solana wallet status for cNFT minting',
         needsAuth: true,
         async test() {
-          const token = localStorage.getItem(TOKEN_KEY);
+          const token = getFleetToken();
           if (!token) throw new Error('Sign in first');
           const r = await fetch('/api/wallet/status', { headers: { Authorization: `Bearer ${token}` } });
           if (!r.ok) throw new Error(`/api/wallet/status returned ${r.status}`);
@@ -480,9 +537,16 @@
     }
 
     function loginWithGrudgeId() {
+      // Existing id.grudge-studio.com page — Discord is on that form already
       const audience = location.origin;
       const redirect = `${audience}/auth/callback?return=/game`;
-      const params = new URLSearchParams({ origin: audience, redirect });
+      const params = new URLSearchParams({
+        origin: audience,
+        redirect,
+        redirect_uri: redirect,
+        return: redirect,
+        app: 'grudge6',
+      });
       const url = `${AUTH_GATEWAY}/api/auth/page?${params.toString()}`;
       const w = 440, h = 720;
       const left = Math.max(0, (screen.width - w) / 2);
@@ -499,6 +563,7 @@
         window.removeEventListener('message', onMsg);
         clearInterval(poll);
         try { popup.close(); } catch (_) {}
+        storeFleetToken(token);
         location.href = `${redirect}${redirect.includes('?') ? '&' : '?'}grudge_token=${encodeURIComponent(token)}`;
       };
       const poll = setInterval(() => { if (popup.closed) { window.removeEventListener('message', onMsg); clearInterval(poll); } }, 500);
@@ -509,19 +574,21 @@
     }
 
     function loginWithDiscord() {
+      // Same Discord OAuth app as Warlords — id.grudge-studio.com (via Vercel rewrite)
       const returnUrl = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
       location.href = `/api/auth/discord/start?return=${returnUrl}`;
     }
 
     async function loadScopedProfile() {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = getFleetToken();
       const panel = document.getElementById('accountPanel');
       const grid = document.getElementById('accountGrid');
       if (!token) { panel.classList.remove('visible'); return; }
       try {
         const r = await fetch('/api/auth/scoped-profile', { headers: { Authorization: `Bearer ${token}` } });
         if (!r.ok) throw new Error('profile unavailable');
-        const { profile: p } = await r.json();
+        const body = await r.json();
+        const p = body.profile || body;
         panel.classList.add('visible');
         const fields = [
           ['Grudge ID', p.grudgeId],
@@ -531,14 +598,14 @@
           ['Discord ID', p.discordId || '—'],
           ['Wallet', p.walletAddress || '—'],
           ['Server wallet', p.serverWalletAddress || '—'],
-          ['GBUX', p.gbuxBalance],
-          ['Gold', p.gold],
-          ['Premium', p.premiumCurrency],
-          ['Characters', `${p.characters.count} (${p.characters.cnftCount} cNFT)`],
-          ['Providers', p.providers.join(', ')],
+          ['GBUX', p.gbuxBalance ?? '—'],
+          ['Gold', p.gold ?? '—'],
+          ['Premium', p.premiumCurrency ?? '—'],
+          ['Characters', p.characters ? `${p.characters.count} (${p.characters.cnftCount || 0} cNFT)` : '—'],
+          ['Providers', Array.isArray(p.providers) ? p.providers.join(', ') : (p.providers || '—')],
         ];
         grid.innerHTML = fields.map(([label, value]) =>
-          `<div class="account-field"><div class="label">${label}</div><div class="value">${value}</div></div>`
+          `<div class="account-field"><div class="label">${label}</div><div class="value">${value ?? '—'}</div></div>`
         ).join('');
       } catch {
         panel.classList.remove('visible');
@@ -546,7 +613,7 @@
     }
 
     function logout() {
-      localStorage.removeItem(TOKEN_KEY);
+      clearFleetTokens();
       localStorage.removeItem('grudge_id');
       localStorage.removeItem('grudge_username');
       document.getElementById('accountPanel').classList.remove('visible');
@@ -556,15 +623,16 @@
     }
 
     async function checkSession() {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = getFleetToken();
       if (!token) return null;
       try {
         const resp = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
         if (!resp.ok) throw new Error('expired');
         const data = await resp.json();
+        storeFleetToken(token);
         return data.user || data;
       } catch {
-        localStorage.removeItem(TOKEN_KEY);
+        clearFleetTokens();
         return null;
       }
     }
@@ -583,6 +651,40 @@
         document.getElementById('grudgeIdBtn').addEventListener('click', loginWithGrudgeId);
         document.getElementById('discordBtn').addEventListener('click', loginWithDiscord);
       }
+    }
+
+    /** Silent operational banner — no user action required */
+    async function runCanonicalOpsCheck() {
+      const banner = document.getElementById('opsBanner');
+      const rows = [];
+      // Discord via same-origin rewrite (must 302)
+      try {
+        const ret = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
+        const r = await fetch(`/api/auth/discord/start?return=${ret}`, { redirect: 'manual' });
+        const ok = r.status === 302 || r.status === 301 || r.type === 'opaqueredirect';
+        rows.push(ok ? '✓ Discord OAuth' : `✗ Discord OAuth (${r.status})`);
+      } catch (e) {
+        rows.push('✗ Discord OAuth (network)');
+      }
+      // Auth me unauthenticated = 401 means route is live
+      try {
+        const r = await fetch('/api/auth/me');
+        rows.push(r.status === 401 || r.status === 200 ? '✓ grudge-api /auth/me' : `✗ /auth/me (${r.status})`);
+      } catch {
+        rows.push('✗ grudge-api /auth/me');
+      }
+      try {
+        const r = await fetch('/api/manifest');
+        rows.push(r.ok ? '✓ D1 manifest' : `✗ manifest (${r.status})`);
+      } catch {
+        rows.push('✗ D1 manifest');
+      }
+      const failed = rows.some((x) => x.startsWith('✗'));
+      banner.style.display = 'block';
+      banner.style.borderColor = failed ? 'rgba(248,113,113,.45)' : 'rgba(110,231,183,.35)';
+      banner.innerHTML = `<strong style="color:${failed ? 'var(--danger)' : 'var(--accent)'}">Canonical ops</strong>
+        <span style="color:var(--muted);margin-left:8px">${rows.join(' · ')}</span>
+        <span style="color:var(--muted);margin-left:8px;font-size:.75rem">Auth: ${AUTH_GATEWAY} · Data: grudge-api</span>`;
     }
 
     function renderChecklist() {
@@ -652,15 +754,50 @@
     document.getElementById('runAllBtn').addEventListener('click', runAll);
     document.getElementById('runNextBtn').addEventListener('click', runNext);
 
+    // Pickup URL tokens (return from Discord / id popup)
+    (function pickupUrlTokens() {
+      const params = new URLSearchParams(location.search);
+      if (location.hash && location.hash.length > 1) {
+        const hp = new URLSearchParams(location.hash.replace(/^#/, ''));
+        for (const [k, v] of hp) if (!params.has(k)) params.set(k, v);
+      }
+      const t = params.get('grudge_token') || params.get('sso_token') || params.get('token');
+      if (t) {
+        storeFleetToken(t);
+        // Clean URL without full reload if already on /game
+        if (location.pathname.includes('/game')) {
+          history.replaceState({}, '', location.pathname);
+        }
+      }
+    })();
+
+    // Wire header buttons present in initial HTML
+    document.getElementById('grudgeIdBtn')?.addEventListener('click', loginWithGrudgeId);
+    document.getElementById('discordBtn')?.addEventListener('click', loginWithDiscord);
+
     const user = await checkSession();
     renderAuth(user);
     renderChecklist();
+    void runCanonicalOpsCheck();
 
     if (user) {
       state.account.status = 'pass';
       state.account.message = `Signed in as ${user.displayName || user.username || user.grudgeId}`;
       await loadScopedProfile();
       renderChecklist();
+      // Auto-pass non-interactive infra checks when signed in
+      for (const id of ['id_gateway', 'discord', 'manifest', 'r2model']) {
+        if (state[id] && state[id].status === 'idle') {
+          try {
+            await runTest(id);
+          } catch { /* ignore */ }
+        }
+      }
+    } else {
+      // Auto-probe Discord + gateway without requiring a click
+      for (const id of ['id_gateway', 'discord', 'manifest']) {
+        try { await runTest(id); } catch { /* ignore */ }
+      }
     }
   </script>
 </body>

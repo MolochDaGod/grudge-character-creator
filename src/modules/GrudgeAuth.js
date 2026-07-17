@@ -11,13 +11,19 @@
  */
 
 import { GRUDGE_API } from './AssetConfig.js';
-import { loginWithGrudgeId } from './grudgeFleet.js';
+import {
+  loginWithGrudgeId as fleetLoginWithGrudgeId,
+  loginWithDiscord as fleetLoginWithDiscord,
+  storeFleetToken,
+  clearFleetTokens,
+  getFleetToken,
+  AUTH_GATEWAY,
+} from './grudgeFleet.js';
 import { model3dFromEquipped } from './CharacterBridge.js';
 
 const TOKEN_KEY = 'grudge_token';
 const STORAGE_KEY_PERSISTENT = 'grudge_token_persist';
 const DEVICE_KEY = 'grudge_device_id';
-const AUTH_GATEWAY = 'https://id.grudge-studio.com';
 
 function deviceId() {
   let id = localStorage.getItem(DEVICE_KEY);
@@ -74,25 +80,25 @@ class GrudgeAuth extends EventTarget {
       displayName: data.displayName || data.username,
     };
     this._ready = true;
-    localStorage.setItem(STORAGE_KEY_PERSISTENT, token);
+    storeFleetToken(token);
     localStorage.setItem('grudge_id', this.user.grudgeId || '');
     this.dispatchEvent(new CustomEvent('login', { detail: this.user }));
     return this.user;
   }
 
   async init() {
-    const stored = localStorage.getItem(STORAGE_KEY_PERSISTENT) || sessionStorage.getItem(TOKEN_KEY);
+    const stored = getFleetToken();
     if (!stored) return null;
     try {
       this._token = stored;
       const data = await this._fetch('/api/auth/me');
       this.user = data.user || data;
       this._ready = true;
+      storeFleetToken(stored);
       this.dispatchEvent(new CustomEvent('login', { detail: this.user }));
       return this.user;
     } catch {
-      localStorage.removeItem(STORAGE_KEY_PERSISTENT);
-      sessionStorage.removeItem(TOKEN_KEY);
+      clearFleetTokens();
       this._token = null;
     }
     return null;
@@ -133,18 +139,18 @@ class GrudgeAuth extends EventTarget {
     return this._applyAuth(data);
   }
 
+  /** Existing Discord OAuth on id.grudge-studio.com — no second Discord app. */
   loginWithDiscord(returnPath = '/auth/callback?return=/creator/') {
-    const returnUrl = encodeURIComponent(`${window.location.origin}${returnPath}`);
-    window.location.href = `/api/auth/discord/start?return=${returnUrl}`;
+    fleetLoginWithDiscord(returnPath);
   }
 
   loginWithGoogle() {
     const returnUrl = encodeURIComponent(window.location.href);
-    window.location.href = `${AUTH_GATEWAY}/auth/google/start?returnUrl=${returnUrl}`;
+    window.location.href = `${AUTH_GATEWAY}/api/auth/google/start?return=${returnUrl}`;
   }
 
   loginWithGrudgeId(returnPath = '/auth/callback?return=/creator/') {
-    loginWithGrudgeId(returnPath);
+    fleetLoginWithGrudgeId(returnPath);
   }
 
   async ensureWallet() {
@@ -176,7 +182,7 @@ class GrudgeAuth extends EventTarget {
     const legacyToken = params.get('token') || params.get('sso_token');
     if (legacyToken) {
       this._token = legacyToken;
-      localStorage.setItem(STORAGE_KEY_PERSISTENT, legacyToken);
+      storeFleetToken(legacyToken);
       params.delete('token');
       params.delete('sso_token');
       const clean = params.toString();
@@ -195,8 +201,7 @@ class GrudgeAuth extends EventTarget {
     this.user = null;
     this._token = null;
     this._ready = false;
-    sessionStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(STORAGE_KEY_PERSISTENT);
+    clearFleetTokens();
     localStorage.removeItem('grudge_id');
     this.dispatchEvent(new Event('logout'));
   }

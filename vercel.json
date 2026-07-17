@@ -10,28 +10,94 @@
     { "source": "/game/", "destination": "/game", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/api/fleet/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/fleet/:path*" },
-    { "source": "/api/supabase/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/supabase/:path*" },
-    { "source": "/api/characters", "destination": "https://grudge-builder-production.up.railway.app/api/characters" },
-    { "source": "/api/characters/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/characters/:path*" },
-    { "source": "/api/wallet/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/wallet/:path*" },
-    { "source": "/api/nfts/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/nfts/:path*" },
-    { "source": "/api/account", "destination": "https://grudge-builder-production.up.railway.app/api/account" },
-    { "source": "/api/account/:path*", "destination": "https://grudge-builder-production.up.railway.app/api/account/:path*" },
-    { "source": "/api/auth/puter", "destination": "https://grudge-builder-production.up.railway.app/api/auth/puter" },
-    { "source": "/api/auth/login", "destination": "https://grudge-builder-production.up.railway.app/api/auth/login" },
-    { "source": "/api/auth/me", "destination": "https://grudge-builder-production.up.railway.app/api/auth/me" },
-    { "source": "/api/auth/scoped-profile", "destination": "https://grudge-builder-production.up.railway.app/api/auth/scoped-profile" },
-    { "source": "/api/auth/discord/start", "destination": "https://grudge-builder-production.up.railway.app/api/auth/discord/start" },
-    { "source": "/api/auth/session/exchange", "destination": "https://api.grudge-studio.com/api/auth/session/exchange" },
-    { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
-    { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
-    { "source": "/api/weapon-attachments/:path*", "destination": "https://models.grudge-studio.com/api/weapon-attachments/:path*" },
-    { "source": "/api/manifest", "destination": "https://models.grudge-studio.com/api/manifest" },
-    { "source": "/api/weapons", "destination": "https://models.grudge-studio.com/api/weapons" },
-    { "source": "/api/:path*", "destination": "https://api.grudge-studio.com/api/:path*" },
+    {
+      "source": "/api/fleet/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/fleet/:path*"
+    },
+    {
+      "source": "/api/supabase/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/supabase/:path*"
+    },
+    {
+      "source": "/api/characters",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/characters"
+    },
+    {
+      "source": "/api/characters/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/characters/:path*"
+    },
+    {
+      "source": "/api/wallet/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/wallet/:path*"
+    },
+    {
+      "source": "/api/nfts/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/nfts/:path*"
+    },
+    {
+      "source": "/api/account",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/account"
+    },
+    {
+      "source": "/api/account/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/account/:path*"
+    },
+    {
+      "source": "/api/auth/puter",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/auth/puter"
+    },
+    {
+      "source": "/api/auth/login",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/auth/login"
+    },
+    {
+      "source": "/api/auth/me",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/auth/me"
+    },
+    {
+      "source": "/api/auth/scoped-profile",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/auth/scoped-profile"
+    },
+    {
+      "source": "/api/auth/session/exchange",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/auth/session/exchange"
+    },
+    {
+      "source": "/api/auth/discord/start",
+      "destination": "https://id.grudge-studio.com/api/auth/discord/start"
+    },
+    {
+      "source": "/api/auth/discord/:path*",
+      "destination": "https://id.grudge-studio.com/api/auth/discord/:path*"
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": "https://id.grudge-studio.com/api/auth/:path*"
+    },
+    {
+      "source": "/api/assets/:path*",
+      "destination": "https://assets.grudge-studio.com/:path*"
+    },
+    {
+      "source": "/api/weapon-attachments/:path*",
+      "destination": "https://models.grudge-studio.com/api/weapon-attachments/:path*"
+    },
+    {
+      "source": "/api/manifest",
+      "destination": "https://models.grudge-studio.com/api/manifest"
+    },
+    {
+      "source": "/api/weapons",
+      "destination": "https://models.grudge-studio.com/api/weapons"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://grudge-api-production-0d46.up.railway.app/api/:path*"
+    },
     { "source": "/game/weapons", "destination": "/game/weapons-mastery.html" },
     { "source": "/creator", "destination": "/creator/index.html" },
+    { "source": "/auth/callback", "destination": "/auth/callback/index.html" },
+    { "source": "/auth/callback/", "destination": "/auth/callback/index.html" },
     { "source": "/game/:path*", "destination": "/game/index.html" }
   ],
   "headers": [
@@ -39,8 +105,20 @@
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://*.grudge-studio.com https://grudgewarlords.com https://*.grudgewarlords.com https://*.vercel.app"
+        },
         { "key": "Permissions-Policy", "value": "interest-cohort=()" }
+      ]
+    },
+    {
+      "source": "/game/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://*.grudge-studio.com https://grudgewarlords.com https://*.grudgewarlords.com https://*.vercel.app"
+        }
       ]
     }
   ]
