@@ -4,10 +4,41 @@
   "installCommand": "npm install",
   "framework": null,
   "redirects": [
-    { "source": "/viewer", "destination": "https://client.grudge-studio.com/viewer", "permanent": false },
-    { "source": "/viewer/:path*", "destination": "https://client.grudge-studio.com/viewer/:path*", "permanent": false },
-    { "source": "/", "destination": "/game", "permanent": false },
-    { "source": "/game/", "destination": "/game", "permanent": false }
+    {
+      "source": "/viewer",
+      "destination": "https://client.grudge-studio.com/viewer",
+      "permanent": false
+    },
+    {
+      "source": "/viewer/:path*",
+      "destination": "https://client.grudge-studio.com/viewer/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/creator",
+      "destination": "/game",
+      "permanent": true
+    },
+    {
+      "source": "/creator/",
+      "destination": "/game",
+      "permanent": true
+    },
+    {
+      "source": "/creator/:path*",
+      "destination": "/game",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "destination": "/game",
+      "permanent": false
+    },
+    {
+      "source": "/game/",
+      "destination": "/game",
+      "permanent": false
+    }
   ],
   "rewrites": [
     {
@@ -75,6 +106,10 @@
       "destination": "https://id.grudge-studio.com/api/auth/:path*"
     },
     {
+      "source": "/api/objectstore/:path*",
+      "destination": "https://objectstore.grudge-studio.com/api/v1/:path*"
+    },
+    {
       "source": "/api/assets/:path*",
       "destination": "https://assets.grudge-studio.com/:path*"
     },
@@ -94,11 +129,26 @@
       "source": "/api/:path*",
       "destination": "https://grudge-api-production-0d46.up.railway.app/api/:path*"
     },
-    { "source": "/game/weapons", "destination": "/game/weapons-mastery.html" },
-    { "source": "/creator", "destination": "/creator/index.html" },
-    { "source": "/auth/callback", "destination": "/auth/callback/index.html" },
-    { "source": "/auth/callback/", "destination": "/auth/callback/index.html" },
-    { "source": "/game/:path*", "destination": "/game/index.html" }
+    {
+      "source": "/game/weapons",
+      "destination": "/game/weapons-mastery.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/auth/callback/index.html"
+    },
+    {
+      "source": "/auth/callback/",
+      "destination": "/auth/callback/index.html"
+    },
+    {
+      "source": "/game",
+      "destination": "/game/index.html"
+    },
+    {
+      "source": "/game/:path*",
+      "destination": "/game/index.html"
+    }
   ],
   "headers": [
     {
@@ -110,15 +160,6 @@
           "value": "frame-ancestors 'self' https://*.grudge-studio.com https://grudgewarlords.com https://*.grudgewarlords.com https://*.vercel.app"
         },
         { "key": "Permissions-Policy", "value": "interest-cohort=()" }
-      ]
-    },
-    {
-      "source": "/game/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://*.grudge-studio.com https://grudgewarlords.com https://*.grudgewarlords.com https://*.vercel.app"
-        }
       ]
     }
   ]

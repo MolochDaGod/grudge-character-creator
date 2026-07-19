@@ -53,7 +53,9 @@
         if (!params.has(k)) params.set(k, v);
       }
     }
-    const returnTo = params.get('return') || '/game/';
+    // Never send users back to retired /creator — production hub is /game
+    let returnTo = params.get('return') || '/game';
+    if (/\/creator/i.test(returnTo)) returnTo = '/game';
     const title = document.getElementById('title');
     const msg = document.getElementById('msg');
     const spinner = document.getElementById('spinner');

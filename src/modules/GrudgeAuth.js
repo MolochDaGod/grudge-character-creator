@@ -140,7 +140,7 @@ class GrudgeAuth extends EventTarget {
   }
 
   /** Existing Discord OAuth on id.grudge-studio.com — no second Discord app. */
-  loginWithDiscord(returnPath = '/auth/callback?return=/creator/') {
+  loginWithDiscord(returnPath = '/auth/callback?return=/game') {
     fleetLoginWithDiscord(returnPath);
   }
 
@@ -149,7 +149,7 @@ class GrudgeAuth extends EventTarget {
     window.location.href = `${AUTH_GATEWAY}/api/auth/google/start?return=${returnUrl}`;
   }
 
-  loginWithGrudgeId(returnPath = '/auth/callback?return=/creator/') {
+  loginWithGrudgeId(returnPath = '/auth/callback?return=/game') {
     fleetLoginWithGrudgeId(returnPath);
   }
 

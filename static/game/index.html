@@ -3,549 +3,200 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grudge Studio — Game Hub</title>
+  <title>Grudge6 — Production Hub</title>
+  <meta name="description" content="Grudge6 production hub: account, grudge6 characters, WCS crafting SSOT, skill trees, recipes, and fleet game deployments.">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/grudge-icon-32x32.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Jost:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #070a12; --panel: #10182a; --card: #141f35; --border: #2a3a5c;
-      --gold: #d4a400; --accent: #6ee7b7; --muted: #8fa3c7; --text: #e8eaf6;
-      --danger: #f87171; --warn: #fbbf24;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#06080f;--panel:#0e1422;--card:#121b2e;--border:#243352;
+      --gold:#d4a84b;--mint:#6ee7b7;--muted:#8fa3c7;--text:#eef1f8;
+      --danger:#f87171;--violet:#a78bfa;
     }
-    body { font-family: 'Jost', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
-    .bg-glow {
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(110,231,183,.12), transparent),
-                  radial-gradient(ellipse 60% 40% at 100% 50%, rgba(212,164,0,.06), transparent);
-    }
-    .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 20px 64px; }
-    header {
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 32px;
-    }
-    .logo { font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--gold); letter-spacing: 1px; }
-    .tagline { color: var(--muted); font-size: .85rem; flex: 1; min-width: 200px; }
-    .auth-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .btn {
-      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
-      background: rgba(0,0,0,.3); color: var(--text); font-size: .85rem;
-      cursor: pointer; transition: all .2s; font-family: inherit;
-    }
-    .btn:hover { border-color: var(--accent); background: rgba(110,231,183,.08); }
-    .btn:disabled { opacity: .45; cursor: not-allowed; }
-    .btn-primary { background: linear-gradient(135deg, rgba(212,164,0,.25), rgba(110,231,183,.15)); border-color: var(--gold); color: var(--gold); font-weight: 600; }
-    .btn-primary:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-sm { padding: 4px 10px; font-size: .75rem; }
-    .user-pill {
-      padding: 6px 12px; border-radius: 20px; background: rgba(110,231,183,.1);
-      border: 1px solid rgba(110,231,183,.3); color: var(--accent); font-size: .8rem;
-    }
-    h2 { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--accent); margin-bottom: 16px; letter-spacing: .5px; }
-    .section { margin-bottom: 40px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-    .card {
-      background: linear-gradient(145deg, var(--card), var(--panel));
-      border: 1px solid var(--border); border-radius: 12px; padding: 20px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .card.live { border-left: 3px solid var(--accent); }
-    .card.external { border-left: 3px solid var(--gold); }
-    .card h3 { font-family: 'Cinzel', serif; font-size: 1rem; }
-    .card p { color: var(--muted); font-size: .82rem; flex: 1; }
-    .card .launch { color: var(--accent); font-size: .85rem; font-weight: 600; text-decoration: none; }
-    .card .launch:hover { color: var(--gold); }
-    .badge { display: inline-block; font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; background: rgba(110,231,183,.15); color: var(--accent); }
-    .badge.fleet { background: rgba(212,164,0,.15); color: var(--gold); }
-    .checklist {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
-    }
-    .checklist-head {
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-      padding: 16px 20px; border-bottom: 1px solid var(--border);
-    }
-    .checklist-head p { color: var(--muted); font-size: .82rem; max-width: 520px; }
-    .progress { font-family: monospace; font-size: .8rem; color: var(--accent); }
-    .check-row {
-      display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: center;
-      padding: 12px 20px; border-bottom: 1px solid rgba(42,58,92,.4);
-    }
-    .check-row:last-child { border-bottom: none; }
-    .check-row.active { background: rgba(110,231,183,.04); }
-    .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
-    .dot.pass { background: var(--accent); box-shadow: 0 0 8px rgba(110,231,183,.5); }
-    .dot.fail { background: var(--danger); }
-    .dot.warn { background: var(--warn); }
-    .dot.run { background: var(--gold); animation: pulse 1s infinite; }
-    @keyframes pulse { 50% { opacity: .4; } }
-    .check-info h4 { font-size: .88rem; margin-bottom: 2px; }
-    .check-info .hint { font-size: .75rem; color: var(--muted); }
-    .check-info .result { font-size: .72rem; color: var(--accent); margin-top: 4px; font-family: monospace; }
-    .check-info .result.err { color: var(--danger); }
-    .check-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-    .systems {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
-    }
-    .systems ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
-    .systems li { font-size: .8rem; color: var(--muted); padding: 6px 0; border-bottom: 1px solid rgba(42,58,92,.5); }
-    .systems li strong { color: var(--text); }
-    .sector-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-      max-width: 720px; margin: 0 auto;
-    }
-    @media (max-width: 640px) { .sector-grid { grid-template-columns: 1fr; } }
-    .sector-card {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-      padding: 14px; text-decoration: none; color: inherit; transition: border-color .2s, transform .15s;
-      display: flex; flex-direction: column; gap: 6px; min-height: 100px;
-    }
-    .sector-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .sector-card.safe { border-left: 3px solid var(--accent); }
-    .sector-card.contested { border-left: 3px solid var(--warn); }
-    .sector-card h4 { font-family: 'Cinzel', serif; font-size: .82rem; line-height: 1.25; }
-    .sector-card .diff { font-size: .68rem; color: var(--muted); font-family: monospace; }
-    .sector-card .play { font-size: .75rem; color: var(--accent); font-weight: 600; margin-top: auto; }
-    .world-map-bar {
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-      margin-bottom: 16px;
-    }
-    .world-map-bar p { color: var(--muted); font-size: .82rem; max-width: 480px; }
-    footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: .75rem; }
-    .account-panel {
-      display: none; background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-      padding: 20px; margin-bottom: 32px;
-    }
-    .account-panel.visible { display: block; }
-    .account-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; }
-    .account-field { background: rgba(0,0,0,.25); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
-    .account-field .label { font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-    .account-field .value { font-size: .82rem; color: var(--accent); font-family: monospace; margin-top: 4px; word-break: break-all; }
-    .btn-discord { border-color: #5865F2; color: #5865F2; }
-    .btn-discord:hover { background: rgba(88,101,242,.12); }
+    body{font-family:Jost,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+    .bg{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% -8%,rgba(212,168,75,.14),transparent),
+        radial-gradient(ellipse 50% 40% at 100% 30%,rgba(110,231,183,.07),transparent),
+        radial-gradient(ellipse 40% 35% at 0% 80%,rgba(167,139,250,.08),transparent)}
+    .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:28px 18px 72px}
+    header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-bottom:22px;border-bottom:1px solid var(--border);margin-bottom:28px}
+    .brand{font-family:Cinzel,serif;font-size:1.55rem;font-weight:800;letter-spacing:.06em;color:var(--gold)}
+    .brand span{color:var(--mint)}
+    .tag{color:var(--muted);font-size:.84rem;flex:1;min-width:200px}
+    .auth{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn{padding:9px 14px;border-radius:9px;border:1px solid var(--border);background:rgba(0,0,0,.35);color:var(--text);font:inherit;font-size:.84rem;cursor:pointer;transition:.15s}
+    .btn:hover{border-color:var(--mint);background:rgba(110,231,183,.08)}
+    .btn-primary{border-color:var(--gold);color:var(--gold);background:linear-gradient(135deg,rgba(212,168,75,.22),rgba(110,231,183,.1));font-weight:600}
+    .btn-ghost{color:var(--muted)}
+    .pill{padding:6px 12px;border-radius:999px;border:1px solid rgba(110,231,183,.35);background:rgba(110,231,183,.1);color:var(--mint);font-size:.8rem}
+    h2{font-family:Cinzel,serif;font-size:1.05rem;color:var(--mint);letter-spacing:.04em;margin-bottom:12px}
+    h3{font-family:Cinzel,serif;font-size:.95rem}
+    .section{margin-bottom:36px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    .card{background:linear-gradient(160deg,var(--card),var(--panel));border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;min-height:140px}
+    .card.live{border-left:3px solid var(--mint)}
+    .card.ssot{border-left:3px solid var(--gold)}
+    .card.fleet{border-left:3px solid var(--violet)}
+    .card p{color:var(--muted);font-size:.82rem;flex:1}
+    .card a,.card .launch{color:var(--mint);font-weight:600;font-size:.84rem;text-decoration:none}
+    .card a:hover{color:var(--gold)}
+    .badge{display:inline-block;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;background:rgba(110,231,183,.12);color:var(--mint);width:fit-content}
+    .badge.gold{background:rgba(212,168,75,.15);color:var(--gold)}
+    .badge.violet{background:rgba(167,139,250,.15);color:var(--violet)}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px}
+    .muted{color:var(--muted);font-size:.82rem}
+    .mono{font-family:ui-monospace,monospace;font-size:.78rem}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .char-list{display:grid;gap:10px}
+    .char-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(0,0,0,.22)}
+    .char-avatar{width:44px;height:44px;border-radius:10px;background:linear-gradient(145deg,#1a2740,#0c1220);border:1px solid var(--border);display:grid;place-items:center;font-family:Cinzel,serif;color:var(--gold)}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+    .stat{background:rgba(0,0,0,.28);border:1px solid var(--border);border-radius:10px;padding:12px}
+    .stat .k{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .stat .v{font-size:1.1rem;font-weight:700;color:var(--gold);margin-top:4px;font-family:Cinzel,serif}
+    .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px}
+    table{width:100%;border-collapse:collapse;font-size:.8rem}
+    th,td{padding:8px 10px;border-bottom:1px solid rgba(36,51,82,.7);text-align:left}
+    th{background:rgba(0,0,0,.35);color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.68rem;letter-spacing:.06em}
+    tr:hover td{background:rgba(110,231,183,.04)}
+    .tier{display:inline-block;padding:1px 6px;border-radius:4px;background:rgba(212,168,75,.15);color:var(--gold);font-size:.7rem}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+    .tab{padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:.78rem}
+    .tab.on{border-color:var(--mint);color:var(--mint);background:rgba(110,231,183,.08)}
+    footer{margin-top:48px;text-align:center;color:var(--muted);font-size:.75rem}
+    .empty{padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:.85rem}
+    .warn{border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.08);color:#fecaca;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:14px}
   </style>
 </head>
 <body>
-  <div class="bg-glow"></div>
+  <div class="bg"></div>
   <div class="wrap">
     <header>
-      <div class="logo">GRUDGE STUDIO</div>
-      <div class="tagline">One Grudge ID · Discord already works on id.grudge-studio.com · no second login</div>
-      <div class="auth-bar" id="authBar">
-        <button class="btn btn-primary" id="grudgeIdBtn">① Grudge ID</button>
-        <button class="btn btn-discord" id="discordBtn">Discord</button>
+      <div class="brand">GRUDGE<span>6</span></div>
+      <div class="tag">Production hub · account · characters · WCS crafting SSOT · fleet deployments<br>
+        <span class="mono">grudge6.grudge-studio.com · /creator permanently retired</span>
+      </div>
+      <div class="auth" id="authBar">
+        <button class="btn btn-primary" id="btnLogin" type="button">Sign in · Grudge ID</button>
+        <button class="btn" id="btnDiscord" type="button">Discord</button>
       </div>
     </header>
-    <div id="opsBanner" style="display:none;margin-bottom:20px;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:var(--panel);font-size:.82rem;"></div>
 
-    <div class="account-panel" id="accountPanel">
-      <h2>Your Account <span style="font-size:.7rem;color:var(--muted);font-family:Jost,sans-serif;">(scoped — masked IDs, no secrets)</span></h2>
-      <div class="account-grid" id="accountGrid"></div>
+    <div class="warn" id="creatorRetireNote">
+      The old <strong>/creator</strong> character page is retired (301 → this hub).
+      Create and manage grudge6 characters via fleet Character Studio + account roster below.
+      Crafting / recipes / skill trees load from ObjectStore production SSOT.
     </div>
 
-    <div class="section">
-      <div class="checklist">
-        <div class="checklist-head">
-          <div>
-            <h2>Connection Checklist</h2>
-            <p>Run tests one at a time after creating your account. Green = working. Yellow = needs your eyes in the opened tab. Red = broken — tell me which step failed.</p>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <span class="progress" id="progressText">0 / 0 passed</span>
-            <button class="btn btn-primary btn-sm" id="runNextBtn">Test next</button>
-            <button class="btn btn-sm" id="runAllBtn">Test all</button>
-          </div>
+    <section class="section">
+      <h2>Account</h2>
+      <div class="panel" id="accountPanel">
+        <p class="muted" id="accountStatus">Not signed in — use Grudge ID (same fleet auth as Warlords).</p>
+        <div class="stat-grid" id="accountStats" style="margin-top:12px;display:none"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">Characters · grudge6 roster</h2>
+        <div class="row">
+          <a class="btn btn-primary" href="https://character.grudge-studio.com?era=warlords" target="_blank" rel="noopener">Create / edit (Character Studio)</a>
+          <button class="btn" type="button" id="btnRefreshChars">Refresh</button>
         </div>
-        <div id="checklist"></div>
       </div>
-    </div>
-
-    <div class="section">
-      <h2>Launch</h2>
-      <div class="grid">
-        <article class="card live">
-          <span class="badge">Live</span>
-          <h3>Character Creator</h3>
-          <p>3D race builder — 6 factions, equipment, attributes, skill trees.</p>
-          <a class="launch" href="/creator/" data-launch="creator">Open Creator →</a>
-        </article>
-        <article class="card external">
-          <span class="badge fleet">Fleet</span>
-          <h3>Warlords — Island 3D</h3>
-          <p>3D island with grudge6 models, harvesting, building, combat.</p>
-          <a class="launch" href="https://client.grudge-studio.com/island-3d" target="_blank" rel="noopener" data-launch="island3d">Enter Island →</a>
-        </article>
-        <article class="card external">
-          <span class="badge fleet">Fleet</span>
-          <h3>Warlords — Home Island</h3>
-          <p>2D island, professions, crafting, character management.</p>
-          <a class="launch" href="https://client.grudge-studio.com/home-island" target="_blank" rel="noopener" data-launch="home-island">Home Island →</a>
-        </article>
-        <article class="card external">
-          <span class="badge fleet">Fleet</span>
-          <h3>Warlords — Play</h3>
-          <p>World map, sailing, PvE, account-linked progression.</p>
-          <a class="launch" href="https://client.grudge-studio.com/play" target="_blank" rel="noopener" data-launch="play">Play Warlords →</a>
-        </article>
-        <article class="card live">
-          <span class="badge">Live</span>
-          <h3>Weapons Mastery Codex</h3>
-          <p>9 weapon talent trees — start at top, capstone mastery at bottom.</p>
-          <a class="launch" href="/game/weapons" data-launch="weapons">View Trees →</a>
-        </article>
-        <article class="card external">
-          <span class="badge fleet">Fleet</span>
-          <h3>Grudge Arena</h3>
-          <p>3D PvP arena with grudge6 models, weapon skills, and fleet Grudge ID.</p>
-          <a class="launch" href="https://grudge-arena.grudge-studio.com" target="_blank" rel="noopener" data-launch="arena">Enter Arena →</a>
-        </article>
-        <article class="card external">
-          <span class="badge fleet">Fleet</span>
-          <h3>Rec0deD:88 Gaming Portal</h3>
-          <p>Retro game library + 3D engines (The-ENGINE). Use grudge-studio.com — not the raw Railway hostname.</p>
-          <a class="launch" href="https://grudge-studio.com" target="_blank" rel="noopener" data-launch="portal">Open Portal →</a>
-        </article>
-        <article class="card external">
-          <span class="badge fleet">Fleet</span>
-          <h3>Survival ARPG</h3>
-          <p>Top-down survival action RPG on Grudges fleet.</p>
-          <a class="launch" href="https://grudges.grudge-studio.com/arpg-game/" target="_blank" rel="noopener" data-launch="arpg">Play ARPG →</a>
-        </article>
+      <div class="panel">
+        <div class="char-list" id="charList"><div class="empty">Sign in to load your account characters from Builder Postgres SSOT.</div></div>
       </div>
-    </div>
+    </section>
 
-    <div class="section">
-      <div class="world-map-bar">
-        <div>
-          <h2>World Map — 9 Sectors</h2>
-          <p>Deploy your grudge6 character into any ocean sector. Each zone is a 4 km × 4 km 3D island with unique biomes, hazards, and resources.</p>
-        </div>
-        <a class="btn btn-primary" href="https://client.grudge-studio.com/play" target="_blank" rel="noopener">Full World Map →</a>
+    <section class="section">
+      <h2>Production SSOT · ObjectStore</h2>
+      <div class="stat-grid" id="ssotStats">
+        <div class="stat"><div class="k">Loading</div><div class="v">…</div></div>
       </div>
-      <div class="sector-grid" id="sectorGrid"></div>
-    </div>
+      <p class="muted" style="margin-top:10px">Source: <span class="mono">objectstore.grudge-studio.com/api/v1</span> · models: <span class="mono">models.grudge-studio.com</span> · binaries: <span class="mono">assets.grudge-studio.com</span></p>
+    </section>
 
-    <div class="systems section">
-      <h2>Game Systems</h2>
-      <ul>
-        <li><strong>Panel</strong> — Equipment, stats, skills, crafting, quests</li>
-        <li><strong>World</strong> — R3F + Rapier 3D combat arena</li>
-        <li><strong>Foundry</strong> — T0–T8 crafting workbench</li>
-        <li><strong>Harvest</strong> — Mining, foresting, mystic, chef, engineer</li>
-        <li><strong>Classes</strong> — Warrior, Ranger, Mage, Worge</li>
-        <li><strong>Combat</strong> — 8 attributes → 37 derived stats</li>
-        <li><strong>cNFT</strong> — Mint characters on Solana via fleet wallet</li>
-        <li><strong>D1 Manifest</strong> — models.grudge-studio.com asset registry</li>
-      </ul>
-    </div>
+    <section class="section">
+      <h2>Crafting · recipes · skill trees</h2>
+      <div class="tabs" id="craftTabs">
+        <button class="tab on" data-tab="recipes" type="button">Recipes</button>
+        <button class="tab" data-tab="weapons" type="button">Weapons / tiers</button>
+        <button class="tab" data-tab="skills" type="button">Skill trees</button>
+        <button class="tab" data-tab="professions" type="button">Professions</button>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <a class="btn" href="https://grudge-crafting.puter.site/" target="_blank" rel="noopener">Open Crafting Suite (Puter)</a>
+        <a class="btn" href="/game/weapons">Weapons mastery trees</a>
+        <a class="btn" href="https://wcs.grudge-studio.com/" target="_blank" rel="noopener">WCS shell</a>
+      </div>
+      <div class="table-wrap" id="craftTableWrap">
+        <table>
+          <thead id="craftHead"></thead>
+          <tbody id="craftBody"><tr><td class="muted">Loading SSOT…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
 
-    <footer>Grudge Studio · grudge6.grudge-studio.com · Same Grudge ID across all fleet apps</footer>
+    <section class="section">
+      <h2>Game deployments</h2>
+      <div class="grid" id="deployGrid"></div>
+    </section>
+
+    <section class="section">
+      <h2>World sectors · deploy grudge6</h2>
+      <p class="muted" style="margin-bottom:12px">3D zone deploys on client.grudge-studio.com (same account).</p>
+      <div class="grid" id="sectorGrid"></div>
+    </section>
+
+    <footer>
+      Grudge Studio · grudge6.grudge-studio.com · Vercel project <span class="mono">grudge-character-creator</span><br>
+      Characters: Railway Postgres · Crafting: ObjectStore master datasets · Auth: id.grudge-studio.com
+    </footer>
   </div>
 
   <script type="module">
-    /** Canonical fleet — same Discord/auth as Warlords (id.grudge-studio.com) */
     const AUTH_GATEWAY = 'https://id.grudge-studio.com';
-    const GAME_DATA = 'https://grudge-api-production-0d46.up.railway.app';
+    const OS = 'https://objectstore.grudge-studio.com/api/v1';
     const FLEET_TOKEN_KEYS = [
-      'grudge_token_persist',
-      'grudge_auth_token',
-      'grudge_session_token',
-      'sso_token',
-      'grudge_token',
+      'grudge_token_persist', 'grudge_auth_token', 'grudge_session_token', 'sso_token', 'grudge_token',
     ];
-    const TOKEN_KEY = 'grudge_token_persist';
 
     function getFleetToken() {
       for (const k of FLEET_TOKEN_KEYS) {
-        try {
-          const v = localStorage.getItem(k);
-          if (v) return v;
-        } catch { /* ignore */ }
+        try { const v = localStorage.getItem(k); if (v) return v; } catch {}
       }
       try { return sessionStorage.getItem('grudge_token'); } catch { return null; }
     }
-
     function storeFleetToken(token) {
       if (!token) return;
-      for (const k of FLEET_TOKEN_KEYS) {
-        try { localStorage.setItem(k, token); } catch { /* ignore */ }
-      }
+      for (const k of FLEET_TOKEN_KEYS) { try { localStorage.setItem(k, token); } catch {} }
     }
-
     function clearFleetTokens() {
-      for (const k of FLEET_TOKEN_KEYS) {
-        try { localStorage.removeItem(k); } catch { /* ignore */ }
+      for (const k of FLEET_TOKEN_KEYS) { try { localStorage.removeItem(k); } catch {} }
+    }
+
+    // Capture token from query after auth callback
+    (function captureToken() {
+      const u = new URL(location.href);
+      const t = u.searchParams.get('grudge_token') || u.searchParams.get('sso_token') || u.searchParams.get('token');
+      if (t) {
+        storeFleetToken(t);
+        u.searchParams.delete('grudge_token');
+        u.searchParams.delete('sso_token');
+        u.searchParams.delete('token');
+        history.replaceState({}, '', u.pathname + u.search + u.hash);
       }
-    }
-
-    const CHECKS = [
-      {
-        id: 'id_gateway',
-        name: 'Auth gateway (id.grudge-studio.com)',
-        hint: 'Canonical login page — Discord / Puter / email all live here',
-        needsAuth: false,
-        async test() {
-          const r = await fetch(`${AUTH_GATEWAY}/api/auth/page`, { method: 'HEAD', mode: 'cors' }).catch(() => null);
-          // HEAD may CORS-fail from browser; also probe same-origin rewrite
-          const local = await fetch('/api/auth/page', { method: 'GET', redirect: 'manual' });
-          if (local.ok || local.status === 302 || local.type === 'opaqueredirect') {
-            return 'OK — id gateway / auth page reachable via same-origin rewrite';
-          }
-          if (r && (r.ok || r.status === 405)) return 'OK — id.grudge-studio.com up';
-          throw new Error(`Auth page probe failed (local ${local.status})`);
-        },
-      },
-      {
-        id: 'discord',
-        name: 'Discord OAuth (existing app)',
-        hint: 'Uses id.grudge-studio.com Discord — identify+email only, no second client',
-        needsAuth: false,
-        async test() {
-          const returnUrl = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
-          // Same path Warlords uses (Vercel → id gateway)
-          const r = await fetch(`/api/auth/discord/start?return=${returnUrl}`, { redirect: 'manual' });
-          const ok =
-            r.status === 302
-            || r.status === 301
-            || r.status === 307
-            || r.status === 308
-            || r.type === 'opaqueredirect';
-          if (!ok) {
-            throw new Error(`Discord start returned ${r.status} — expected 302 via id gateway`);
-          }
-          return 'OK — Discord OAuth start works (click Discord to sign in)';
-        },
-      },
-      {
-        id: 'account',
-        name: 'Grudge ID account',
-        hint: 'Sign in above first — verifies session JWT on grudge-api',
-        needsAuth: true,
-        async test() {
-          const token = getFleetToken();
-          if (!token) throw new Error('Not signed in — click Discord or Grudge ID');
-          const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-          if (!r.ok) throw new Error(`/api/auth/me returned ${r.status}`);
-          const data = await r.json();
-          const u = data.user || data;
-          return `OK — ${u.displayName || u.username || u.grudgeId || 'authenticated'}`;
-        },
-      },
-      {
-        id: 'characters',
-        name: 'Your characters API',
-        hint: 'Lists characters tied to your account on grudge-api Railway',
-        needsAuth: true,
-        async test() {
-          const token = getFleetToken();
-          if (!token) throw new Error('Sign in first');
-          const r = await fetch('/api/characters', { headers: { Authorization: `Bearer ${token}` } });
-          if (!r.ok) throw new Error(`/api/characters returned ${r.status}`);
-          const data = await r.json();
-          const list = Array.isArray(data) ? data : (data.characters || []);
-          return `OK — ${list.length} character(s) loaded`;
-        },
-      },
-      {
-        id: 'wallet',
-        name: 'Fleet wallet',
-        hint: 'Checks Solana wallet status for cNFT minting',
-        needsAuth: true,
-        async test() {
-          const token = getFleetToken();
-          if (!token) throw new Error('Sign in first');
-          const r = await fetch('/api/wallet/status', { headers: { Authorization: `Bearer ${token}` } });
-          if (!r.ok) throw new Error(`/api/wallet/status returned ${r.status}`);
-          const data = await r.json();
-          return data.walletAddress ? `OK — wallet ${data.walletAddress.slice(0,8)}…` : 'OK — no wallet yet (can create in Warlords)';
-        },
-      },
-      {
-        id: 'manifest',
-        name: 'D1 manifest API',
-        hint: 'Race/equipment/animation registry from models.grudge-studio.com',
-        needsAuth: false,
-        async test() {
-          const r = await fetch('/api/manifest');
-          if (!r.ok) throw new Error(`/api/manifest returned ${r.status}`);
-          const data = await r.json();
-          const factions = Object.keys(data.factions || {}).length;
-          return `OK — ${factions} factions, v${data.version || '?'}`;
-        },
-      },
-      {
-        id: 'r2model',
-        name: 'R2 grudge6 race model CDN',
-        hint: 'WK_Characters.fbx from assets.grudge-studio.com via /api/assets proxy',
-        needsAuth: false,
-        async test() {
-          const r = await fetch('/api/assets/models/grudge6/races/WK_Characters.fbx', { method: 'HEAD' });
-          if (!r.ok) throw new Error(`grudge6 FBX HEAD returned ${r.status}`);
-          const size = r.headers.get('content-length');
-          return `OK — WK_Characters.fbx${size ? ` (${Math.round(size/1024)}KB)` : ''}`;
-        },
-      },
-      {
-        id: 'creator',
-        name: 'Character Creator page',
-        hint: 'HTML shell + JS bundle at /creator/',
-        needsAuth: false,
-        open: '/creator/',
-        async test() {
-          const r = await fetch('/creator/');
-          if (!r.ok) throw new Error(`/creator/ returned ${r.status}`);
-          const html = await r.text();
-          const m = html.match(/\/creator\/assets\/index-[^"]+\.js/);
-          if (!m) throw new Error('Creator JS bundle not found in HTML');
-          const jr = await fetch(m[0]);
-          if (!jr.ok) throw new Error(`Bundle ${m[0]} returned ${jr.status}`);
-          return `OK — bundle ${m[0].split('/').pop()}`;
-        },
-      },
-      {
-        id: 'weapons',
-        name: 'Weapons Mastery codex',
-        hint: 'Static talent trees at /game/weapons',
-        needsAuth: false,
-        open: '/game/weapons',
-        async test() {
-          const r = await fetch('/game/weapons');
-          if (!r.ok) throw new Error(`/game/weapons returned ${r.status}`);
-          const html = await r.text();
-          if (!html.includes('CAPSTONE')) throw new Error('Top-down flow labels missing');
-          if (!html.includes('"id":"swords"')) throw new Error('Swords tree data missing');
-          return 'OK — 9 weapon trees, top→bottom layout';
-        },
-      },
-      {
-        id: 'arena',
-        name: 'Grudge Arena',
-        hint: '3D PvP arena at grudge-arena.grudge-studio.com',
-        needsAuth: false,
-        open: 'https://grudge-arena.grudge-studio.com',
-        external: true,
-        async test() {
-          const ok = await probeExternal('https://grudge-arena.grudge-studio.com');
-          if (!ok) throw new Error('Arena unreachable');
-          return 'REACHABLE — open tab & confirm arena loads';
-        },
-      },
-      {
-        id: 'island3d',
-        name: 'Warlords Island 3D',
-        hint: 'Opens client.grudge-studio.com — confirm 3D scene loads & same Grudge ID',
-        needsAuth: false,
-        open: 'https://client.grudge-studio.com/island-3d',
-        external: true,
-        async test() {
-          const ok = await probeExternal('https://client.grudge-studio.com/island-3d');
-          if (!ok) throw new Error('Site unreachable');
-          return 'REACHABLE — open tab & confirm 3D island loads with your account';
-        },
-      },
-      {
-        id: 'home-island',
-        name: 'Warlords Home Island',
-        hint: '2D island view — confirm your characters appear',
-        needsAuth: false,
-        open: 'https://client.grudge-studio.com/home-island',
-        external: true,
-        async test() {
-          const ok = await probeExternal('https://client.grudge-studio.com/home-island');
-          if (!ok) throw new Error('Site unreachable');
-          return 'REACHABLE — open tab & confirm island UI loads';
-        },
-      },
-      {
-        id: 'play',
-        name: 'Warlords Play shell',
-        hint: 'Main game entry — world map / launcher',
-        needsAuth: false,
-        open: 'https://client.grudge-studio.com/play',
-        external: true,
-        async test() {
-          const ok = await probeExternal('https://client.grudge-studio.com/play');
-          if (!ok) throw new Error('Site unreachable');
-          return 'REACHABLE — open tab & confirm play shell loads';
-        },
-      },
-      {
-        id: 'portal',
-        name: 'Rec0deD:88 Gaming Portal',
-        hint: 'The-ENGINE on grudge-studio.com (Vercel). Railway mirror: the-engine.up.railway.app',
-        needsAuth: false,
-        open: 'https://grudge-studio.com',
-        external: true,
-        async test() {
-          const r = await fetch('https://grudge-studio.com/api/health');
-          if (!r.ok) throw new Error(`grudge-studio.com/api/health returned ${r.status}`);
-          const data = await r.json();
-          return `OK — portal healthy (${data.status || 'up'})`;
-        },
-      },
-      {
-        id: 'arpg',
-        name: 'Survival ARPG',
-        hint: 'Grudges fleet game at grudges.grudge-studio.com',
-        needsAuth: false,
-        open: 'https://grudges.grudge-studio.com/arpg-game/',
-        external: true,
-        async test() {
-          const ok = await probeExternal('https://grudges.grudge-studio.com/arpg-game/');
-          if (!ok) throw new Error('Site unreachable');
-          return 'REACHABLE — open tab & confirm game canvas loads';
-        },
-      },
-    ];
-
-    const WORLD_SECTORS = [
-      { id: 'ethereal_falls', name: 'Ethereal Falls', diff: '6–9', row: 0, col: 0, accent: '#bf40ff' },
-      { id: 'frostbite_expanse', name: 'Frostbite Expanse', diff: '4–7', row: 0, col: 1, accent: '#7dd3fc' },
-      { id: 'thornwood_wilds', name: 'Thornwood Wilds', diff: '3–7', row: 0, col: 2, accent: '#4ade80' },
-      { id: 'stormbreak_reef', name: 'Stormbreak Reef', diff: '3–6', row: 1, col: 0, accent: '#fbbf24' },
-      { id: 'convergence_nexus', name: 'Convergence Nexus', diff: '5–10', row: 1, col: 1, accent: '#c084fc', contested: true },
-      { id: 'ashen_wastes', name: 'Ashen Wastes', diff: '4–8', row: 1, col: 2, accent: '#fbbf24' },
-      { id: 'abyssal_trench', name: 'Abyssal Trench', diff: '7–10', row: 2, col: 0, accent: '#22d3ee' },
-      { id: 'haven_shore', name: 'Haven Shore', diff: '1–3', row: 2, col: 1, accent: '#6ee7b7', safe: true },
-      { id: 'ember_depths', name: 'Ember Depths', diff: '5–9', row: 2, col: 2, accent: '#f97316' },
-    ];
-
-    const ISLAND_BASE = 'https://client.grudge-studio.com/island-3d';
-    document.getElementById('sectorGrid').innerHTML = WORLD_SECTORS.map(s => {
-      const cls = 'sector-card' + (s.safe ? ' safe' : '') + (s.contested ? ' contested' : '');
-      const url = `${ISLAND_BASE}?mode=zone&sector=${s.id}`;
-      return `<a class="${cls}" href="${url}" target="_blank" rel="noopener" style="border-top:2px solid ${s.accent}">
-        <h4>${s.name}</h4>
-        <span class="diff">Difficulty ${s.diff}</span>
-        <span class="play">Deploy 3D Zone →</span>
-      </a>`;
-    }).join('');
-
-    const state = Object.fromEntries(CHECKS.map(c => [c.id, { status: 'idle', message: '' }]));
-
-    function probeExternal(url) {
-      return new Promise(resolve => {
-        const img = new Image();
-        const timer = setTimeout(() => resolve(false), 8000);
-        img.onload = () => { clearTimeout(timer); resolve(true); };
-        img.onerror = () => {
-          fetch(url, { mode: 'no-cors' }).then(() => { clearTimeout(timer); resolve(true); })
-            .catch(() => { clearTimeout(timer); resolve(false); });
-        };
-        img.src = url + '/favicon.ico?' + Date.now();
-      });
-    }
+    })();
 
     function loginWithGrudgeId() {
-      // Existing id.grudge-studio.com page — Discord is on that form already
       const audience = location.origin;
       const redirect = `${audience}/auth/callback?return=/game`;
       const params = new URLSearchParams({
-        origin: audience,
-        redirect,
-        redirect_uri: redirect,
-        return: redirect,
-        app: 'grudge6',
+        origin: audience, redirect, redirect_uri: redirect, return: redirect, app: 'grudge6',
       });
       const url = `${AUTH_GATEWAY}/api/auth/page?${params.toString()}`;
       const w = 440, h = 720;
@@ -553,8 +204,8 @@
       const top = Math.max(0, (screen.height - h) / 2);
       const popup = window.open(url, 'grudge-auth', `width=${w},height=${h},left=${left},top=${top},popup=yes`);
       if (!popup) { location.href = url; return; }
-      const sendInit = () => { try { popup.postMessage({ type: 'grudge-auth:init', origin: audience }, AUTH_GATEWAY); } catch (_) {} };
-      const onMsg = async (e) => {
+      const sendInit = () => { try { popup.postMessage({ type: 'grudge-auth:init', origin: audience }, AUTH_GATEWAY); } catch {} };
+      const onMsg = (e) => {
         if (e.origin !== AUTH_GATEWAY && !/^https:\/\/([a-z0-9-]+\.)*grudge-studio\.com$/.test(e.origin)) return;
         if (e.data?.type === 'grudge-auth:ready') { sendInit(); return; }
         const token = e.data?.token;
@@ -562,9 +213,9 @@
         if (e.data?.type !== 'grudge-auth:success' && e.data?.type !== 'grudge:auth:success') return;
         window.removeEventListener('message', onMsg);
         clearInterval(poll);
-        try { popup.close(); } catch (_) {}
+        try { popup.close(); } catch {}
         storeFleetToken(token);
-        location.href = `${redirect}${redirect.includes('?') ? '&' : '?'}grudge_token=${encodeURIComponent(token)}`;
+        location.href = `/game?grudge_token=${encodeURIComponent(token)}`;
       };
       const poll = setInterval(() => { if (popup.closed) { window.removeEventListener('message', onMsg); clearInterval(poll); } }, 500);
       const initRetry = setInterval(sendInit, 400);
@@ -574,231 +225,238 @@
     }
 
     function loginWithDiscord() {
-      // Same Discord OAuth app as Warlords — id.grudge-studio.com (via Vercel rewrite)
       const returnUrl = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
       location.href = `/api/auth/discord/start?return=${returnUrl}`;
     }
 
-    async function loadScopedProfile() {
-      const token = getFleetToken();
-      const panel = document.getElementById('accountPanel');
-      const grid = document.getElementById('accountGrid');
-      if (!token) { panel.classList.remove('visible'); return; }
-      try {
-        const r = await fetch('/api/auth/scoped-profile', { headers: { Authorization: `Bearer ${token}` } });
-        if (!r.ok) throw new Error('profile unavailable');
-        const body = await r.json();
-        const p = body.profile || body;
-        panel.classList.add('visible');
-        const fields = [
-          ['Grudge ID', p.grudgeId],
-          ['Username', p.username],
-          ['Email', p.email || '—'],
-          ['Puter ID', p.puterId || '—'],
-          ['Discord ID', p.discordId || '—'],
-          ['Wallet', p.walletAddress || '—'],
-          ['Server wallet', p.serverWalletAddress || '—'],
-          ['GBUX', p.gbuxBalance ?? '—'],
-          ['Gold', p.gold ?? '—'],
-          ['Premium', p.premiumCurrency ?? '—'],
-          ['Characters', p.characters ? `${p.characters.count} (${p.characters.cnftCount || 0} cNFT)` : '—'],
-          ['Providers', Array.isArray(p.providers) ? p.providers.join(', ') : (p.providers || '—')],
-        ];
-        grid.innerHTML = fields.map(([label, value]) =>
-          `<div class="account-field"><div class="label">${label}</div><div class="value">${value ?? '—'}</div></div>`
-        ).join('');
-      } catch {
-        panel.classList.remove('visible');
-      }
-    }
-
     function logout() {
       clearFleetTokens();
-      localStorage.removeItem('grudge_id');
-      localStorage.removeItem('grudge_username');
-      document.getElementById('accountPanel').classList.remove('visible');
-      renderAuth();
-      Object.values(state).forEach(s => { s.status = 'idle'; s.message = ''; });
-      renderChecklist();
+      renderAuth(null);
+      document.getElementById('charList').innerHTML = '<div class="empty">Signed out.</div>';
+      document.getElementById('accountStats').style.display = 'none';
     }
 
-    async function checkSession() {
-      const token = getFleetToken();
-      if (!token) return null;
-      try {
-        const resp = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-        if (!resp.ok) throw new Error('expired');
-        const data = await resp.json();
-        storeFleetToken(token);
-        return data.user || data;
-      } catch {
-        clearFleetTokens();
-        return null;
-      }
+    async function api(path, token) {
+      const r = await fetch(path, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!r.ok) throw new Error(`${path} → ${r.status}`);
+      return r.json();
     }
 
     function renderAuth(user) {
       const bar = document.getElementById('authBar');
-      if (user) {
-        const name = user.displayName || user.username || user.grudgeId || 'Player';
-        bar.innerHTML = `<span class="user-pill">✓ ${name}</span><button class="btn" id="logoutBtn">Sign out</button>`;
-        document.getElementById('logoutBtn').addEventListener('click', logout);
-        loadScopedProfile();
-      } else {
+      if (!user) {
         bar.innerHTML = `
-          <button class="btn btn-primary" id="grudgeIdBtn">① Grudge ID</button>
-          <button class="btn btn-discord" id="discordBtn">Discord</button>`;
-        document.getElementById('grudgeIdBtn').addEventListener('click', loginWithGrudgeId);
-        document.getElementById('discordBtn').addEventListener('click', loginWithDiscord);
+          <button class="btn btn-primary" id="btnLogin" type="button">Sign in · Grudge ID</button>
+          <button class="btn" id="btnDiscord" type="button">Discord</button>`;
+        document.getElementById('btnLogin').onclick = loginWithGrudgeId;
+        document.getElementById('btnDiscord').onclick = loginWithDiscord;
+        document.getElementById('accountStatus').textContent = 'Not signed in — use Grudge ID (same fleet auth as Warlords).';
+        return;
+      }
+      const name = user.displayName || user.username || user.grudgeId || 'Player';
+      bar.innerHTML = `<span class="pill">${name}</span><button class="btn btn-ghost" id="btnLogout" type="button">Sign out</button>`;
+      document.getElementById('btnLogout').onclick = logout;
+      document.getElementById('accountStatus').textContent = `Signed in as ${name}`;
+    }
+
+    async function loadAccount() {
+      const token = getFleetToken();
+      if (!token) { renderAuth(null); return; }
+      try {
+        const me = await api('/api/auth/me', token);
+        const user = me.user || me;
+        renderAuth(user);
+        try {
+          const scoped = await api('/api/auth/scoped-profile', token);
+          const p = scoped.profile || scoped;
+          const stats = document.getElementById('accountStats');
+          stats.style.display = 'grid';
+          stats.innerHTML = [
+            ['Grudge ID', p.grudgeId || user.grudgeId],
+            ['GBUX', p.gbuxBalance ?? '—'],
+            ['Gold', p.gold ?? '—'],
+            ['Wallet', p.walletAddress ? `${String(p.walletAddress).slice(0, 8)}…` : '—'],
+            ['Characters', p.characters?.count ?? '—'],
+            ['Providers', Array.isArray(p.providers) ? p.providers.join(', ') : (p.providers || '—')],
+          ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v" style="font-size:.95rem">${v ?? '—'}</div></div>`).join('');
+        } catch { /* optional */ }
+        await loadCharacters(token);
+      } catch {
+        clearFleetTokens();
+        renderAuth(null);
       }
     }
 
-    /** Silent operational banner — no user action required */
-    async function runCanonicalOpsCheck() {
-      const banner = document.getElementById('opsBanner');
-      const rows = [];
-      // Discord via same-origin rewrite (must 302)
+    async function loadCharacters(token) {
+      const el = document.getElementById('charList');
       try {
-        const ret = encodeURIComponent(`${location.origin}/auth/callback?return=/game`);
-        const r = await fetch(`/api/auth/discord/start?return=${ret}`, { redirect: 'manual' });
-        const ok = r.status === 302 || r.status === 301 || r.type === 'opaqueredirect';
-        rows.push(ok ? '✓ Discord OAuth' : `✗ Discord OAuth (${r.status})`);
-      } catch (e) {
-        rows.push('✗ Discord OAuth (network)');
-      }
-      // Auth me unauthenticated = 401 means route is live
-      try {
-        const r = await fetch('/api/auth/me');
-        rows.push(r.status === 401 || r.status === 200 ? '✓ grudge-api /auth/me' : `✗ /auth/me (${r.status})`);
-      } catch {
-        rows.push('✗ grudge-api /auth/me');
-      }
-      try {
-        const r = await fetch('/api/manifest');
-        rows.push(r.ok ? '✓ D1 manifest' : `✗ manifest (${r.status})`);
-      } catch {
-        rows.push('✗ D1 manifest');
-      }
-      const failed = rows.some((x) => x.startsWith('✗'));
-      banner.style.display = 'block';
-      banner.style.borderColor = failed ? 'rgba(248,113,113,.45)' : 'rgba(110,231,183,.35)';
-      banner.innerHTML = `<strong style="color:${failed ? 'var(--danger)' : 'var(--accent)'}">Canonical ops</strong>
-        <span style="color:var(--muted);margin-left:8px">${rows.join(' · ')}</span>
-        <span style="color:var(--muted);margin-left:8px;font-size:.75rem">Auth: ${AUTH_GATEWAY} · Data: grudge-api</span>`;
-    }
-
-    function renderChecklist() {
-      const el = document.getElementById('checklist');
-      el.innerHTML = CHECKS.map((c, i) => {
-        const s = state[c.id];
-        const dotClass = s.status === 'pass' ? 'pass' : s.status === 'fail' ? 'fail' : s.status === 'warn' ? 'warn' : s.status === 'run' ? 'run' : '';
-        const resultClass = s.status === 'fail' ? 'err' : '';
-        return `
-          <div class="check-row" data-id="${c.id}">
-            <span class="dot ${dotClass}"></span>
-            <div class="check-info">
-              <h4>${i + 1}. ${c.name}</h4>
-              <div class="hint">${c.hint}</div>
-              ${s.message ? `<div class="result ${resultClass}">${s.message}</div>` : ''}
+        const data = await api('/api/characters?era=warlords', token).catch(() => api('/api/characters', token));
+        const list = Array.isArray(data) ? data : (data.characters || data.results || []);
+        if (!list.length) {
+          el.innerHTML = `<div class="empty">No characters yet. Create one in Character Studio (WCS modular grudge6 races), then refresh.</div>`;
+          return;
+        }
+        el.innerHTML = list.map((c) => {
+          const id = c.id || c.uuid || c.characterId || '';
+          const name = c.name || c.displayName || 'Hero';
+          const race = c.raceId || c.race || c.race_id || '—';
+          const cls = c.classId || c.class || c.class_id || '—';
+          const lvl = c.level ?? '—';
+          return `<div class="char-row">
+            <div class="char-avatar">${String(name).slice(0,1).toUpperCase()}</div>
+            <div>
+              <strong>${escapeHtml(name)}</strong>
+              <div class="muted mono">${escapeHtml(String(race))} · ${escapeHtml(String(cls))} · Lv ${lvl}</div>
+              <div class="muted mono" style="font-size:.7rem">${escapeHtml(String(id).slice(0, 28))}</div>
             </div>
-            <div class="check-actions">
-              <button class="btn btn-sm btn-test" data-id="${c.id}">Test</button>
-              ${c.open ? `<button class="btn btn-sm btn-open" data-url="${c.open}">Open</button>` : ''}
+            <div class="row">
+              <a class="btn" href="https://client.grudge-studio.com/island-3d?characterId=${encodeURIComponent(id)}" target="_blank" rel="noopener">Deploy island</a>
+              <a class="btn" href="https://grudge-arena.grudge-studio.com" target="_blank" rel="noopener">Arena</a>
             </div>
           </div>`;
-      }).join('');
-
-      el.querySelectorAll('.btn-test').forEach(btn => {
-        btn.addEventListener('click', () => runTest(btn.dataset.id));
-      });
-      el.querySelectorAll('.btn-open').forEach(btn => {
-        btn.addEventListener('click', () => window.open(btn.dataset.url, '_blank'));
-      });
-
-      const passed = CHECKS.filter(c => state[c.id].status === 'pass' || state[c.id].status === 'warn').length;
-      document.getElementById('progressText').textContent = `${passed} / ${CHECKS.length} passed`;
-    }
-
-    async function runTest(id) {
-      const check = CHECKS.find(c => c.id === id);
-      if (!check) return;
-      const s = state[id];
-      s.status = 'run';
-      s.message = 'Testing…';
-      renderChecklist();
-
-      try {
-        const msg = await check.test();
-        s.status = check.external ? 'warn' : 'pass';
-        s.message = msg;
-        if (check.open) window.open(check.open, '_blank');
-      } catch (err) {
-        s.status = 'fail';
-        s.message = err.message || String(err);
-      }
-      renderChecklist();
-    }
-
-    async function runAll() {
-      for (const c of CHECKS) {
-        await runTest(c.id);
-        await new Promise(r => setTimeout(r, 400));
+        }).join('');
+      } catch (e) {
+        el.innerHTML = `<div class="empty">Could not load characters: ${escapeHtml(e.message)}</div>`;
       }
     }
 
-    function runNext() {
-      const next = CHECKS.find(c => state[c.id].status === 'idle' || state[c.id].status === 'fail');
-      if (next) runTest(next.id);
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    document.getElementById('runAllBtn').addEventListener('click', runAll);
-    document.getElementById('runNextBtn').addEventListener('click', runNext);
+    let SSOT = { recipes: [], weapons: [], skillTrees: {}, professions: [] };
 
-    // Pickup URL tokens (return from Discord / id popup)
-    (function pickupUrlTokens() {
-      const params = new URLSearchParams(location.search);
-      if (location.hash && location.hash.length > 1) {
-        const hp = new URLSearchParams(location.hash.replace(/^#/, ''));
-        for (const [k, v] of hp) if (!params.has(k)) params.set(k, v);
-      }
-      const t = params.get('grudge_token') || params.get('sso_token') || params.get('token');
-      if (t) {
-        storeFleetToken(t);
-        // Clean URL without full reload if already on /game
-        if (location.pathname.includes('/game')) {
-          history.replaceState({}, '', location.pathname);
+    async function loadSsot() {
+      const [catalog, recipes, weapons, trees, profs, races, classes, manifest] = await Promise.all([
+        fetch(`${OS}/catalog.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${OS}/master-recipes.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${OS}/weapons.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${OS}/master-skillTrees.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${OS}/master-professions.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${OS}/races.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${OS}/classes.json`).then((r) => r.json()).catch(() => null),
+        fetch('/api/manifest').then((r) => r.json()).catch(() => null),
+      ]);
+
+      SSOT.recipes = recipes?.recipes || [];
+      // weapons.json structure: categories.*.items
+      const wItems = [];
+      if (weapons?.categories) {
+        for (const [cat, block] of Object.entries(weapons.categories)) {
+          for (const it of block.items || []) wItems.push({ ...it, _cat: cat });
         }
       }
-    })();
+      SSOT.weapons = wItems;
+      SSOT.skillTrees = trees?.skillTrees || {};
+      SSOT.professions = profs?.professions || profs?.items || (Array.isArray(profs) ? profs : []);
 
-    // Wire header buttons present in initial HTML
-    document.getElementById('grudgeIdBtn')?.addEventListener('click', loginWithGrudgeId);
-    document.getElementById('discordBtn')?.addEventListener('click', loginWithDiscord);
+      const t = catalog?.totals || {};
+      const factionCount = manifest?.factions ? Object.keys(manifest.factions).length : '—';
+      document.getElementById('ssotStats').innerHTML = [
+        ['Recipes', t.masterRecipes || SSOT.recipes.length],
+        ['Weapons', t.weapons || SSOT.weapons.length],
+        ['Items', t.masterItems || '—'],
+        ['Skill trees', trees?.totalClasses || Object.keys(SSOT.skillTrees).length],
+        ['Professions', t.masterProfessions || SSOT.professions.length],
+        ['Races', races?.total || Object.keys(races?.races || {}).length || '—'],
+        ['Classes', classes?.total || Object.keys(classes?.classes || {}).length || '—'],
+        ['Manifest factions', factionCount],
+      ].map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 
-    const user = await checkSession();
-    renderAuth(user);
-    renderChecklist();
-    void runCanonicalOpsCheck();
+      renderCraftTab('recipes');
+    }
 
-    if (user) {
-      state.account.status = 'pass';
-      state.account.message = `Signed in as ${user.displayName || user.username || user.grudgeId}`;
-      await loadScopedProfile();
-      renderChecklist();
-      // Auto-pass non-interactive infra checks when signed in
-      for (const id of ['id_gateway', 'discord', 'manifest', 'r2model']) {
-        if (state[id] && state[id].status === 'idle') {
-          try {
-            await runTest(id);
-          } catch { /* ignore */ }
+    function renderCraftTab(tab) {
+      document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+      const head = document.getElementById('craftHead');
+      const body = document.getElementById('craftBody');
+      if (tab === 'recipes') {
+        head.innerHTML = '<tr><th>Recipe</th><th>Result</th><th>Profession</th><th>Materials</th></tr>';
+        body.innerHTML = SSOT.recipes.slice(0, 40).map((r) => {
+          const mats = (r.materials || []).map((m) => `${m.name || m.uuid}×${m.quantity || 1}`).join(', ');
+          return `<tr><td>${escapeHtml(r.name || r.uuid)}</td><td>${escapeHtml(r.resultName || r.resultItemId || '—')}</td><td><span class="tier">${escapeHtml(r.profession || r.category || '—')}</span></td><td class="muted">${escapeHtml(mats || '—')}</td></tr>`;
+        }).join('') || '<tr><td colspan="4" class="muted">No recipes loaded</td></tr>';
+        if (SSOT.recipes.length > 40) {
+          body.innerHTML += `<tr><td colspan="4" class="muted">Showing 40 of ${SSOT.recipes.length} master recipes (ObjectStore SSOT)</td></tr>`;
         }
-      }
-    } else {
-      // Auto-probe Discord + gateway without requiring a click
-      for (const id of ['id_gateway', 'discord', 'manifest']) {
-        try { await runTest(id); } catch { /* ignore */ }
+      } else if (tab === 'weapons') {
+        head.innerHTML = '<tr><th>Weapon</th><th>Category</th><th>Tier / stats</th><th>Lore</th></tr>';
+        body.innerHTML = SSOT.weapons.slice(0, 40).map((w) => {
+          const stats = w.stats ? Object.entries(w.stats).slice(0, 3).map(([k, v]) => `${k}:${v}`).join(' · ') : (w.primaryStat || '—');
+          return `<tr><td>${escapeHtml(w.name || w.id)}</td><td><span class="tier">${escapeHtml(w._cat || w.category || '—')}</span></td><td class="mono">${escapeHtml(String(stats))}</td><td class="muted">${escapeHtml((w.lore || '').slice(0, 80))}</td></tr>`;
+        }).join('') || '<tr><td colspan="4" class="muted">No weapons loaded</td></tr>';
+      } else if (tab === 'skills') {
+        head.innerHTML = '<tr><th>Class</th><th>Tree</th><th>Skills</th><th>Color</th></tr>';
+        body.innerHTML = Object.entries(SSOT.skillTrees).map(([id, tree]) => {
+          const skillCount = Array.isArray(tree.skills) ? tree.skills.length
+            : (tree.tiers ? Object.values(tree.tiers).flat().length : '—');
+          return `<tr><td>${escapeHtml(tree.className || id)}</td><td class="mono">${escapeHtml(tree.uuid || id)}</td><td>${skillCount}</td><td><span class="tier" style="background:${tree.color || '#333'}33;color:${tree.color || 'var(--gold)'}">${escapeHtml(tree.color || '—')}</span></td></tr>`;
+        }).join('') || '<tr><td colspan="4" class="muted">No skill trees loaded</td></tr>';
+      } else {
+        head.innerHTML = '<tr><th>Profession</th><th>ID</th><th>Details</th></tr>';
+        const list = Array.isArray(SSOT.professions) ? SSOT.professions : Object.values(SSOT.professions || {});
+        body.innerHTML = list.slice(0, 30).map((p) => {
+          const name = p.name || p.id || p.profession || '—';
+          const id = p.uuid || p.id || '—';
+          const det = p.description || p.category || p.tier || '';
+          return `<tr><td>${escapeHtml(name)}</td><td class="mono">${escapeHtml(String(id).slice(0, 36))}</td><td class="muted">${escapeHtml(String(det).slice(0, 100))}</td></tr>`;
+        }).join('') || '<tr><td colspan="3" class="muted">No professions loaded — open Crafting Suite</td></tr>';
       }
     }
+
+    document.getElementById('craftTabs').addEventListener('click', (e) => {
+      const t = e.target.closest('.tab');
+      if (t?.dataset.tab) renderCraftTab(t.dataset.tab);
+    });
+    document.getElementById('btnRefreshChars')?.addEventListener('click', () => {
+      const token = getFleetToken();
+      if (token) loadCharacters(token);
+    });
+
+    const DEPLOYS = [
+      { badge: 'Live', cls: 'live', title: 'Warlords Island 3D', blurb: 'Deploy grudge6 race models — harvest, build, combat.', href: 'https://client.grudge-studio.com/island-3d' },
+      { badge: 'Live', cls: 'live', title: 'Home Island', blurb: '2D island, professions, crafting, character management.', href: 'https://client.grudge-studio.com/home-island' },
+      { badge: 'Live', cls: 'live', title: 'Warlords Play', blurb: 'World map, sailing, PvE, account progression.', href: 'https://client.grudge-studio.com/play' },
+      { badge: 'Fleet', cls: 'fleet', title: 'Grudge Arena', blurb: '3D PvP with grudge6 models & weapon skills.', href: 'https://grudge-arena.grudge-studio.com' },
+      { badge: 'SSOT', cls: 'ssot', title: 'Crafting Suite', blurb: 'Puter crafting + profession trees (production recipes).', href: 'https://grudge-crafting.puter.site/' },
+      { badge: 'SSOT', cls: 'ssot', title: 'Character Studio', blurb: 'WCS-aligned modular character create / equip.', href: 'https://character.grudge-studio.com?era=warlords' },
+      { badge: 'Live', cls: 'live', title: 'Weapons Mastery', blurb: 'On-site talent trees (9 weapon types).', href: '/game/weapons' },
+      { badge: 'Fleet', cls: 'fleet', title: 'Survival ARPG', blurb: 'Grudges fleet top-down action RPG.', href: 'https://grudges.grudge-studio.com/arpg-game/' },
+      { badge: 'Fleet', cls: 'fleet', title: 'Mine-Loader / Grudox', blurb: 'Voxel Realms · seed deploy · explorers.', href: 'https://mine-loader.vercel.app/' },
+      { badge: 'Fleet', cls: 'fleet', title: 'Studio Portal', blurb: 'The ENGINE · grudge-studio.com', href: 'https://grudge-studio.com' },
+    ];
+    document.getElementById('deployGrid').innerHTML = DEPLOYS.map((d) => `
+      <article class="card ${d.cls}">
+        <span class="badge ${d.cls === 'ssot' ? 'gold' : d.cls === 'fleet' ? 'violet' : ''}">${d.badge}</span>
+        <h3>${d.title}</h3>
+        <p>${d.blurb}</p>
+        <a href="${d.href}" target="_blank" rel="noopener">Open →</a>
+      </article>`).join('');
+
+    const SECTORS = [
+      { id: 'haven_shore', name: 'Haven Shore', diff: '1–3', accent: '#6ee7b7' },
+      { id: 'thornwood_wilds', name: 'Thornwood Wilds', diff: '3–7', accent: '#4ade80' },
+      { id: 'stormbreak_reef', name: 'Stormbreak Reef', diff: '3–6', accent: '#fbbf24' },
+      { id: 'frostbite_expanse', name: 'Frostbite Expanse', diff: '4–7', accent: '#7dd3fc' },
+      { id: 'ashen_wastes', name: 'Ashen Wastes', diff: '4–8', accent: '#fbbf24' },
+      { id: 'ember_depths', name: 'Ember Depths', diff: '5–9', accent: '#f97316' },
+      { id: 'ethereal_falls', name: 'Ethereal Falls', diff: '6–9', accent: '#bf40ff' },
+      { id: 'abyssal_trench', name: 'Abyssal Trench', diff: '7–10', accent: '#22d3ee' },
+      { id: 'convergence_nexus', name: 'Convergence Nexus', diff: '5–10', accent: '#c084fc' },
+    ];
+    document.getElementById('sectorGrid').innerHTML = SECTORS.map((s) => `
+      <a class="card live" style="border-top:2px solid ${s.accent};text-decoration:none;color:inherit"
+         href="https://client.grudge-studio.com/island-3d?mode=zone&sector=${s.id}" target="_blank" rel="noopener">
+        <h3>${s.name}</h3>
+        <p class="mono">Difficulty ${s.diff}</p>
+        <span class="launch">Deploy 3D zone →</span>
+      </a>`).join('');
+
+    document.getElementById('btnLogin')?.addEventListener('click', loginWithGrudgeId);
+    document.getElementById('btnDiscord')?.addEventListener('click', loginWithDiscord);
+
+    loadAccount();
+    loadSsot();
   </script>
 </body>
 </html>

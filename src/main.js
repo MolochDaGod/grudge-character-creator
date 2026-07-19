@@ -1012,13 +1012,13 @@ async function initPersistence() {
 
   if (grudgeIdBtn) {
     grudgeIdBtn.addEventListener('click', () => {
-      grudgeAuth.loginWithGrudgeId('/auth/callback?return=/creator/');
+      grudgeAuth.loginWithGrudgeId('/auth/callback?return=/game');
     });
   }
 
   if (discordBtn) {
     discordBtn.addEventListener('click', () => {
-      grudgeAuth.loginWithDiscord('/auth/callback?return=/creator/');
+      grudgeAuth.loginWithDiscord('/auth/callback?return=/game');
     });
   }
 
